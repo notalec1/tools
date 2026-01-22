@@ -1,36 +1,38 @@
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Initialize Canvas
     const canvas = new fabric.Canvas('c', {
-        isDrawingMode: true, // Default to Pen
-        backgroundColor: '#ffffff'
+        isDrawingMode: true, // Start in Pen mode
+        backgroundColor: '#ffffff',
+        selection: false     // Disable group selection in drawing mode
     });
 
-    // Brush Settings Defaults
+    // Brush Defaults
     canvas.freeDrawingBrush.width = 3;
     canvas.freeDrawingBrush.color = '#000000';
 
-    // 2. Responsive Canvas Logic
+    // 2. ROBUST Sizing Logic (Replaces window.resize)
     const wrapper = document.getElementById('canvas-wrapper');
 
-    function resizeCanvas() {
-        // Set canvas dimensions to match the wrapper div exactly
-        canvas.setWidth(wrapper.clientWidth);
-        canvas.setHeight(wrapper.clientHeight);
-        canvas.renderAll();
-    }
+    const resizeCanvas = () => {
+        // Get the exact pixel size of the container
+        const width = wrapper.clientWidth;
+        const height = wrapper.clientHeight;
 
-    // Listen for window resize
-    window.addEventListener('resize', resizeCanvas);
-    
-    // Call once immediately to set initial size
-    resizeCanvas();
+        if (width > 0 && height > 0) {
+            canvas.setWidth(width);
+            canvas.setHeight(height);
+            canvas.renderAll();
+        }
+    };
 
-    // 3. State & Tools
-    const colorPicker = document.getElementById('color-picker');
-    const sizeSlider = document.getElementById('line-width');
-    const fileInput = document.getElementById('file-input');
-    
-    // Tool Buttons
+    // Observer: Triggers whenever the wrapper changes size (including load)
+    const observer = new ResizeObserver(() => {
+        resizeCanvas();
+    });
+    observer.observe(wrapper);
+
+
+    // 3. Tool Logic
     const tools = {
         select: document.getElementById('btn-select'),
         pen: document.getElementById('btn-pen'),
@@ -40,45 +42,64 @@ document.addEventListener('DOMContentLoaded', () => {
         save: document.getElementById('btn-save')
     };
 
+    const colorPicker = document.getElementById('color-picker');
+    const sizeSlider = document.getElementById('line-width');
+    const fileInput = document.getElementById('file-input');
+
     function setActiveTool(mode) {
-        // UI: Remove 'active' class from all, add to current
-        Object.keys(tools).forEach(k => {
-            if(tools[k] && tools[k].classList) tools[k].classList.remove('active');
+        // Clear active classes safely
+        Object.values(tools).forEach(btn => {
+            if (btn) btn.classList.remove('active');
         });
 
-        // Logic Switch
-        canvas.isDrawingMode = false; // Disable drawing by default
-        canvas.selection = true;      // Enable selection by default
+        // Set Canvas State Defaults
+        canvas.isDrawingMode = false;
+        canvas.selection = true;
+        canvas.defaultCursor = 'default';
 
-        if (mode === 'pen') {
-            tools.pen.classList.add('active');
-            canvas.isDrawingMode = true;
-            canvas.selection = false;
-        } 
-        else if (mode === 'select') {
-            tools.select.classList.add('active');
-        }
-        else if (mode === 'rect') {
-            tools.rect.classList.add('active');
-            addShape('rect');
-            // Switch back to select mode after adding shape
-            setTimeout(() => setActiveTool('select'), 100); 
-        }
-        else if (mode === 'text') {
-            tools.text.classList.add('active');
-            addText();
-            setTimeout(() => setActiveTool('select'), 100);
+        // Apply Mode Logic
+        switch (mode) {
+            case 'pen':
+                if(tools.pen) tools.pen.classList.add('active');
+                canvas.isDrawingMode = true;
+                canvas.selection = false;
+                canvas.freeDrawingBrush.color = colorPicker.value;
+                canvas.freeDrawingBrush.width = parseInt(sizeSlider.value, 10);
+                break;
+
+            case 'select':
+                if(tools.select) tools.select.classList.add('active');
+                canvas.selection = true;
+                break;
+
+            case 'rect':
+                if(tools.rect) tools.rect.classList.add('active');
+                addShape('rect');
+                // Auto-revert to select so they can move the shape
+                setTimeout(() => setActiveTool('select'), 200);
+                break;
+
+            case 'text':
+                if(tools.text) tools.text.classList.add('active');
+                addText();
+                setTimeout(() => setActiveTool('select'), 200);
+                break;
         }
     }
 
     // 4. Object Creation Helpers
     function addShape(type) {
-        const center = canvas.getCenter();
+        // Place in center of current view
+        const vpt = canvas.viewportTransform; 
+        // Simple center calculation
+        const centerX = canvas.getWidth() / 2;
+        const centerY = canvas.getHeight() / 2;
+
         if (type === 'rect') {
             const rect = new fabric.Rect({
-                left: center.left - 50,
-                top: center.top - 50,
-                fill: colorPicker.value, // Use current color
+                left: centerX - 50,
+                top: centerY - 50,
+                fill: colorPicker.value,
                 width: 100,
                 height: 100,
                 stroke: '#000',
@@ -90,10 +111,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function addText() {
-        const center = canvas.getCenter();
-        const text = new fabric.IText('Text', {
-            left: center.left,
-            top: center.top,
+        const centerX = canvas.getWidth() / 2;
+        const centerY = canvas.getHeight() / 2;
+        
+        const text = new fabric.IText('Type Here', {
+            left: centerX - 60,
+            top: centerY - 20,
             fill: colorPicker.value,
             fontSize: 40
         });
@@ -101,51 +124,44 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.setActiveObject(text);
     }
 
-    // 5. Event Listeners
-    tools.select.onclick = () => setActiveTool('select');
-    tools.pen.onclick = () => setActiveTool('pen');
-    tools.rect.onclick = () => setActiveTool('rect');
-    tools.text.onclick = () => setActiveTool('text');
+    // 5. Event Binding
+    if(tools.select) tools.select.onclick = () => setActiveTool('select');
+    if(tools.pen) tools.pen.onclick = () => setActiveTool('pen');
+    if(tools.rect) tools.rect.onclick = () => setActiveTool('rect');
+    if(tools.text) tools.text.onclick = () => setActiveTool('text');
     
-    tools.eraser.onclick = () => {
+    if(tools.eraser) tools.eraser.onclick = () => {
         if(confirm('Clear entire whiteboard?')) {
             canvas.clear();
             canvas.setBackgroundColor('#ffffff', canvas.renderAll.bind(canvas));
         }
     };
 
-    // Color & Size Changes
-    colorPicker.addEventListener('input', (e) => {
+    if(colorPicker) colorPicker.addEventListener('input', (e) => {
         const val = e.target.value;
         canvas.freeDrawingBrush.color = val;
-        
-        // If an object is selected, change its color too
         const activeObj = canvas.getActiveObject();
         if (activeObj) {
-            // Handle different object types
-            if (activeObj.type === 'i-text') activeObj.set('fill', val);
-            else activeObj.set('fill', val);
+            activeObj.set('fill', val);
             canvas.renderAll();
         }
     });
 
-    sizeSlider.addEventListener('input', (e) => {
+    if(sizeSlider) sizeSlider.addEventListener('input', (e) => {
         const val = parseInt(e.target.value, 10);
         canvas.freeDrawingBrush.width = val;
     });
 
-    // Save
-    tools.save.onclick = () => {
+    if(tools.save) tools.save.onclick = () => {
         const json = JSON.stringify(canvas.toJSON());
         const blob = new Blob([json], {type: "application/json"});
         const link = document.createElement('a');
-        link.download = `whiteboard-${new Date().toISOString().slice(0,10)}.json`;
+        link.download = `whiteboard-${new Date().getTime()}.json`;
         link.href = URL.createObjectURL(blob);
         link.click();
     };
 
-    // Load
-    fileInput.addEventListener('change', (e) => {
+    if(fileInput) fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
@@ -153,9 +169,9 @@ document.addEventListener('DOMContentLoaded', () => {
             canvas.loadFromJSON(f.target.result, canvas.renderAll.bind(canvas));
         };
         reader.readAsText(file);
-        e.target.value = ''; // Reset
+        e.target.value = '';
     });
 
-    // 6. INITIALIZATION
-    setActiveTool('pen'); // Set default tool to Pen
+    // 6. Force Start
+    setActiveTool('pen');
 });
