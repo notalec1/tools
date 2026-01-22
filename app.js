@@ -1,156 +1,161 @@
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Initialize Canvas
     const canvas = new fabric.Canvas('c', {
-        isDrawingMode: false,
-        backgroundColor: '#ffffff' 
+        isDrawingMode: true, // Default to Pen
+        backgroundColor: '#ffffff'
     });
 
-    // Resize canvas to fill window
+    // Brush Settings Defaults
+    canvas.freeDrawingBrush.width = 3;
+    canvas.freeDrawingBrush.color = '#000000';
+
+    // 2. Responsive Canvas Logic
+    const wrapper = document.getElementById('canvas-wrapper');
+
     function resizeCanvas() {
-        const container = document.getElementById('canvas-container');
-        canvas.setWidth(container.offsetWidth);
-        canvas.setHeight(container.offsetHeight);
+        // Set canvas dimensions to match the wrapper div exactly
+        canvas.setWidth(wrapper.clientWidth);
+        canvas.setHeight(wrapper.clientHeight);
         canvas.renderAll();
     }
-    
+
+    // Listen for window resize
     window.addEventListener('resize', resizeCanvas);
-    resizeCanvas(); // Initial sizing
+    
+    // Call once immediately to set initial size
+    resizeCanvas();
 
-    // 2. State Management
-    let currentMode = 'select'; // select, pen, rect, circle
-    let currentColor = '#000000';
-    let currentSize = 3;
-
-    // DOM Elements
+    // 3. State & Tools
     const colorPicker = document.getElementById('color-picker');
     const sizeSlider = document.getElementById('line-width');
     const fileInput = document.getElementById('file-input');
     
-    const btns = {
+    // Tool Buttons
+    const tools = {
         select: document.getElementById('btn-select'),
         pen: document.getElementById('btn-pen'),
         rect: document.getElementById('btn-rect'),
-        circle: document.getElementById('btn-circle'),
         text: document.getElementById('btn-text'),
-        clear: document.getElementById('btn-clear'),
+        eraser: document.getElementById('btn-eraser'),
         save: document.getElementById('btn-save')
     };
 
-    // 3. Helper: Set Active Button UI
     function setActiveTool(mode) {
-        currentMode = mode;
-        // Reset button styles
-        Object.values(btns).forEach(b => {
-            if(b) b.classList.remove('active');
+        // UI: Remove 'active' class from all, add to current
+        Object.keys(tools).forEach(k => {
+            if(tools[k] && tools[k].classList) tools[k].classList.remove('active');
         });
 
-        // Set active class if button exists for mode
-        if (btns[mode]) btns[mode].classList.add('active');
+        // Logic Switch
+        canvas.isDrawingMode = false; // Disable drawing by default
+        canvas.selection = true;      // Enable selection by default
 
-        // Configure Canvas based on mode
         if (mode === 'pen') {
+            tools.pen.classList.add('active');
             canvas.isDrawingMode = true;
-            canvas.freeDrawingBrush.color = currentColor;
-            canvas.freeDrawingBrush.width = parseInt(currentSize, 10);
-        } else {
-            canvas.isDrawingMode = false;
+            canvas.selection = false;
+        } 
+        else if (mode === 'select') {
+            tools.select.classList.add('active');
+        }
+        else if (mode === 'rect') {
+            tools.rect.classList.add('active');
+            addShape('rect');
+            // Switch back to select mode after adding shape
+            setTimeout(() => setActiveTool('select'), 100); 
+        }
+        else if (mode === 'text') {
+            tools.text.classList.add('active');
+            addText();
+            setTimeout(() => setActiveTool('select'), 100);
         }
     }
 
-    // 4. Tool Event Listeners
-    btns.select.onclick = () => setActiveTool('select');
-    btns.pen.onclick = () => setActiveTool('pen');
-    
-    btns.rect.onclick = () => {
-        setActiveTool('rect');
-        const rect = new fabric.Rect({
-            left: 100, top: 100, fill: currentColor, width: 100, height: 60
-        });
-        canvas.add(rect);
-        canvas.setActiveObject(rect);
-    };
+    // 4. Object Creation Helpers
+    function addShape(type) {
+        const center = canvas.getCenter();
+        if (type === 'rect') {
+            const rect = new fabric.Rect({
+                left: center.left - 50,
+                top: center.top - 50,
+                fill: colorPicker.value, // Use current color
+                width: 100,
+                height: 100,
+                stroke: '#000',
+                strokeWidth: 2
+            });
+            canvas.add(rect);
+            canvas.setActiveObject(rect);
+        }
+    }
 
-    btns.circle.onclick = () => {
-        setActiveTool('circle');
-        const circle = new fabric.Circle({
-            left: 150, top: 150, fill: currentColor, radius: 50
-        });
-        canvas.add(circle);
-        canvas.setActiveObject(circle);
-    };
-
-    btns.text.onclick = () => {
-        setActiveTool('text');
-        const text = new fabric.IText('Type here', {
-            left: 200, top: 200, fill: currentColor, fontSize: 30
+    function addText() {
+        const center = canvas.getCenter();
+        const text = new fabric.IText('Text', {
+            left: center.left,
+            top: center.top,
+            fill: colorPicker.value,
+            fontSize: 40
         });
         canvas.add(text);
         canvas.setActiveObject(text);
-    };
+    }
 
-    btns.clear.onclick = () => {
+    // 5. Event Listeners
+    tools.select.onclick = () => setActiveTool('select');
+    tools.pen.onclick = () => setActiveTool('pen');
+    tools.rect.onclick = () => setActiveTool('rect');
+    tools.text.onclick = () => setActiveTool('text');
+    
+    tools.eraser.onclick = () => {
         if(confirm('Clear entire whiteboard?')) {
             canvas.clear();
             canvas.setBackgroundColor('#ffffff', canvas.renderAll.bind(canvas));
         }
     };
 
-    // 5. Settings Listeners
+    // Color & Size Changes
     colorPicker.addEventListener('input', (e) => {
-        currentColor = e.target.value;
-        canvas.freeDrawingBrush.color = currentColor;
+        const val = e.target.value;
+        canvas.freeDrawingBrush.color = val;
         
-        // Update selected object if any
+        // If an object is selected, change its color too
         const activeObj = canvas.getActiveObject();
         if (activeObj) {
-            activeObj.set('fill', currentColor);
+            // Handle different object types
+            if (activeObj.type === 'i-text') activeObj.set('fill', val);
+            else activeObj.set('fill', val);
             canvas.renderAll();
         }
     });
 
     sizeSlider.addEventListener('input', (e) => {
-        currentSize = parseInt(e.target.value, 10);
-        canvas.freeDrawingBrush.width = currentSize;
+        const val = parseInt(e.target.value, 10);
+        canvas.freeDrawingBrush.width = val;
     });
 
-    // 6. File I/O Logic
-
-    // SAVE (Export JSON)
-    btns.save.onclick = () => {
+    // Save
+    tools.save.onclick = () => {
         const json = JSON.stringify(canvas.toJSON());
         const blob = new Blob([json], {type: "application/json"});
         const link = document.createElement('a');
-        link.download = `whiteboard-${Date.now()}.json`;
+        link.download = `whiteboard-${new Date().toISOString().slice(0,10)}.json`;
         link.href = URL.createObjectURL(blob);
         link.click();
     };
 
-    // LOAD (Import JSON or .flipchart stub)
+    // Load
     fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
         const reader = new FileReader();
-
-        // Handle .json
-        if (file.name.endsWith('.json')) {
-            reader.onload = (f) => {
-                const data = f.target.result;
-                canvas.loadFromJSON(data, canvas.renderAll.bind(canvas));
-            };
-            reader.readAsText(file);
-        } 
-        // Handle .flipchart (Placeholder)
-        else if (file.name.endsWith('.flipchart')) {
-            alert("Note: .flipchart files are a proprietary binary format.\n\n" +
-                  "To support this, we would need a server-side parser or a complex binary reader.\n" +
-                  "Currently, please use the native .json format for saving/loading.");
-        }
-        else {
-            alert("Unsupported file format.");
-        }
-        
-        // Reset input so same file can be selected again
-        e.target.value = '';
+        reader.onload = (f) => {
+            canvas.loadFromJSON(f.target.result, canvas.renderAll.bind(canvas));
+        };
+        reader.readAsText(file);
+        e.target.value = ''; // Reset
     });
+
+    // 6. INITIALIZATION
+    setActiveTool('pen'); // Set default tool to Pen
 });
