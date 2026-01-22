@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenBoard - Web Edition</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Load Fabric.js from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+</head>
+<body>
+
+    <div class="toolbar">
+        <div class="tool-group">
+            <button id="btn-select" class="active" title="Select/Move">🖱️ Select</button>
+            <button id="btn-pen" title="Pen Tool">✏️ Pen</button>
+            <button id="btn-rect" title="Rectangle">⬜ Rect</button>
+            <button id="btn-circle" title="Circle">⭕ Circle</button>
+            <button id="btn-text" title="Text Box">TEXT</button>
+        </div>
+
+        <div class="tool-group">
+            <label for="color-picker">Color:</label>
+            <input type="color" id="color-picker" value="#000000">
+            
+            <label for="line-width">Size:</label>
+            <input type="range" id="line-width" min="1" max="50" value="3">
+        </div>
+
+        <div class="tool-group">
+            <button id="btn-clear" title="Clear Canvas">🗑️ Clear</button>
+            <button id="btn-save" title="Save Project">💾 Save</button>
+            <label class="file-upload">
+                📂 Open
+                <input type="file" id="file-input" accept=".json,.flipchart">
+            </label>
+        </div>
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="c"></canvas>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
