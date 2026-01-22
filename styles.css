@@ -1,0 +1,81 @@
+:root {
+    --toolbar-height: 60px;
+    --bg-color: #f0f0f0;
+    --toolbar-bg: #333;
+    --text-color: #fff;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    font-family: sans-serif;
+    background-color: var(--bg-color);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.toolbar {
+    height: var(--toolbar-height);
+    background-color: var(--toolbar-bg);
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 10;
+}
+
+.tool-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-right: 20px;
+    border-right: 1px solid #555;
+}
+
+.tool-group:last-child {
+    border-right: none;
+}
+
+button {
+    background: #555;
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+button:hover {
+    background: #666;
+}
+
+button.active {
+    background: #007bff;
+    font-weight: bold;
+}
+
+.file-upload {
+    background: #555;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    display: inline-block;
+}
+
+.file-upload input[type="file"] {
+    display: none;
+}
+
+#canvas-container {
+    flex-grow: 1;
+    position: relative;
+    background-color: #fff;
+    /* ActivInspire often uses a subtle grid, keeping it white for now */
+}
