@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OpenFlipchart - Professional</title>
+    <title>OpenFlipchart - Phase 1</title>
     <!-- Fabric.js Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     <!-- Icons -->
@@ -11,19 +11,18 @@
     
     <style>
         /* =========================================
-           1. CSS RESET & VARIABLES
+           1. CSS STYLES
            ========================================= */
         :root {
             --bg-dark: #2c3e50;
             --bg-panel: #ecf0f1;
             --bg-canvas: #95a5a6;
-            --accent: #e67e22; /* Promethean Orange-ish */
+            --accent: #e67e22;
             --accent-hover: #d35400;
             --text-main: #2c3e50;
             --border: #bdc3c7;
-            --toolbar-width: 70px;
-            --sidebar-width: 220px;
             --header-height: 50px;
+            --sidebar-width: 200px;
         }
 
         * { box-sizing: border-box; user-select: none; }
@@ -37,17 +36,7 @@
             flex-direction: column;
         }
 
-        /* =========================================
-           2. LAYOUT GRID
-           ========================================= */
-        #app-container {
-            display: flex;
-            flex: 1;
-            height: calc(100% - var(--header-height));
-            position: relative;
-        }
-
-        /* Header (Menu Bar) */
+        /* Header */
         header {
             height: var(--header-height);
             background: #34495e;
@@ -63,7 +52,15 @@
         .brand { font-weight: bold; font-size: 1.2rem; display: flex; align-items: center; gap: 10px; }
         .menu-actions { display: flex; gap: 10px; }
 
-        /* Left Sidebar (Page Browser) */
+        /* Main Container */
+        #app-container {
+            display: flex;
+            flex: 1;
+            height: calc(100% - var(--header-height));
+            position: relative;
+        }
+
+        /* Sidebar */
         #sidebar {
             width: var(--sidebar-width);
             background: var(--bg-panel);
@@ -72,14 +69,13 @@
             flex-direction: column;
             padding: 10px;
             overflow-y: auto;
-            transition: transform 0.3s;
         }
 
         .page-thumbnail {
             width: 100%;
-            height: 120px;
+            height: 110px;
             background: white;
-            border: 2px solid transparent;
+            border: 3px solid transparent;
             margin-bottom: 10px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             cursor: pointer;
@@ -87,145 +83,79 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
+            font-size: 1.5rem;
             color: #ccc;
         }
 
         .page-thumbnail.active { border-color: var(--accent); }
-        .page-thumbnail:hover { border-color: #bdc3c7; }
-        
         .page-number {
-            position: absolute;
-            bottom: 5px; right: 5px;
-            font-size: 0.8rem;
-            background: rgba(0,0,0,0.5);
-            color: white;
-            padding: 2px 6px;
-            border-radius: 4px;
+            position: absolute; bottom: 5px; right: 5px;
+            font-size: 0.8rem; background: rgba(0,0,0,0.6);
+            color: white; padding: 2px 6px; border-radius: 4px;
         }
 
         #add-page-btn {
-            width: 100%;
-            padding: 10px;
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
+            width: 100%; padding: 10px; background: var(--accent);
+            color: white; border: none; border-radius: 4px;
+            cursor: pointer; font-weight: bold; margin-bottom: 10px;
         }
 
-        /* Main Canvas Area */
+        /* Canvas Stage */
         #canvas-stage {
             flex: 1;
             background-color: var(--bg-canvas);
             position: relative;
             overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            /* Center the canvas visually if needed, usually we fill 100% though */
         }
 
-        /* The actual canvas wrapper usually has a shadow in ActivInspire */
-        .canvas-container {
-            box-shadow: 0 0 20px rgba(0,0,0,0.3);
-            background-color: white; /* Default Flipchart Color */
-        }
-
-        /* Floating Main Toolbar */
+        /* Floating Toolbar */
         #main-toolbar {
             position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 60px;
+            top: 20px; right: 20px;
+            width: 50px;
             background: white;
             border-radius: 8px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            padding: 10px 5px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            align-items: center;
+            padding: 10px 0;
+            display: flex; flex-direction: column;
+            align-items: center; gap: 5px;
             z-index: 100;
         }
 
         .tool-btn {
-            width: 44px; height: 44px;
-            border: none;
-            background: transparent;
-            border-radius: 6px;
-            cursor: pointer;
-            color: var(--text-main);
-            font-size: 1.2rem;
-            position: relative;
-            transition: background 0.2s;
+            width: 40px; height: 40px;
+            border: none; background: transparent;
+            border-radius: 6px; cursor: pointer;
+            color: var(--text-main); font-size: 1.1rem;
+            transition: all 0.2s;
         }
 
         .tool-btn:hover { background: #dfe6e9; }
         .tool-btn.active { background: #ffeaa7; color: #d35400; border: 2px solid var(--accent); }
-        
-        /* Tooltip */
-        .tool-btn::after {
-            content: attr(data-tooltip);
-            position: absolute;
-            right: 120%;
-            top: 50%;
-            transform: translateY(-50%);
-            background: #2d3436;
-            color: white;
-            font-size: 12px;
-            padding: 5px 8px;
-            border-radius: 4px;
-            white-space: nowrap;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s;
-        }
-        .tool-btn:hover::after { opacity: 1; }
 
-        /* Properties Bar (Bottom) */
+        /* Properties Bar */
         #properties-bar {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
+            position: absolute; bottom: 20px; left: 50%;
             transform: translateX(-50%);
             background: white;
-            padding: 10px 20px;
+            padding: 8px 20px;
             border-radius: 50px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            display: flex;
-            align-items: center;
-            gap: 15px;
+            display: flex; align-items: center; gap: 15px;
             z-index: 100;
         }
 
         .color-swatch {
-            width: 28px; height: 28px;
-            border-radius: 50%;
-            cursor: pointer;
-            border: 2px solid rgba(0,0,0,0.1);
+            width: 24px; height: 24px; border-radius: 50%;
+            cursor: pointer; border: 2px solid rgba(0,0,0,0.1);
         }
-        .color-swatch.active { transform: scale(1.2); border-color: var(--text-main); }
+        .color-swatch.active { transform: scale(1.3); border-color: #333; }
 
-        input[type="range"] { width: 100px; }
-
-        /* Modal / Dialogs */
-        .modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            width: 300px;
-        }
+        .divider { width: 1px; height: 20px; background: #ddd; }
+        
         .btn-primary {
-            background: var(--accent); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;
+            background: var(--accent); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;
         }
 
     </style>
@@ -234,84 +164,63 @@
 
     <!-- Header -->
     <header>
-        <div class="brand">
-            <i class="fas fa-chalkboard-teacher"></i> OpenFlipchart
-        </div>
+        <div class="brand"><i class="fas fa-chalkboard-teacher"></i> OpenFlipchart</div>
         <div class="menu-actions">
             <button class="btn-primary" id="btn-import">Import</button>
-            <button class="btn-primary" id="btn-export">Save Project</button>
+            <button class="btn-primary" id="btn-export">Save</button>
             <input type="file" id="file-input" hidden accept=".json">
         </div>
     </header>
 
     <div id="app-container">
         
-        <!-- Sidebar: Page Browser -->
+        <!-- Sidebar -->
         <div id="sidebar">
             <button id="add-page-btn">+ New Page</button>
-            <div id="page-list">
-                <!-- Thumbnails go here -->
-            </div>
+            <div id="page-list"></div>
         </div>
 
-        <!-- Canvas Area -->
+        <!-- Stage -->
         <div id="canvas-stage">
             <canvas id="c"></canvas>
         </div>
 
-        <!-- Floating Toolbar -->
+        <!-- Tools -->
         <div id="main-toolbar">
-            <button class="tool-btn active" id="tool-select" data-tooltip="Select (V)">
-                <i class="fas fa-mouse-pointer"></i>
-            </button>
-            <button class="tool-btn" id="tool-pen" data-tooltip="Pen (P)">
-                <i class="fas fa-pen"></i>
-            </button>
-            <button class="tool-btn" id="tool-highlighter" data-tooltip="Highlighter">
-                <i class="fas fa-highlighter"></i>
-            </button>
-            <button class="tool-btn" id="tool-eraser" data-tooltip="Eraser (E)">
-                <i class="fas fa-eraser"></i>
-            </button>
-            <hr style="width: 80%; border: 0; border-top: 1px solid #eee;">
-            <button class="tool-btn" id="tool-rect" data-tooltip="Rectangle">
-                <i class="far fa-square"></i>
-            </button>
-            <button class="tool-btn" id="tool-circle" data-tooltip="Circle">
-                <i class="far fa-circle"></i>
-            </button>
-            <button class="tool-btn" id="tool-text" data-tooltip="Text (T)">
-                <i class="fas fa-font"></i>
-            </button>
-            <hr style="width: 80%; border: 0; border-top: 1px solid #eee;">
-            <button class="tool-btn" id="tool-undo" data-tooltip="Undo (Ctrl+Z)">
-                <i class="fas fa-undo"></i>
-            </button>
-            <button class="tool-btn" id="tool-clear" data-tooltip="Clear Page">
-                <i class="fas fa-trash-alt"></i>
-            </button>
+            <button class="tool-btn active" id="tool-select" title="Select (V)"><i class="fas fa-mouse-pointer"></i></button>
+            <button class="tool-btn" id="tool-pen" title="Pen (P)"><i class="fas fa-pen"></i></button>
+            <button class="tool-btn" id="tool-highlighter" title="Highlighter"><i class="fas fa-highlighter"></i></button>
+            <button class="tool-btn" id="tool-eraser" title="Eraser (E)"><i class="fas fa-eraser"></i></button>
+            <div style="height:1px; width:30px; background:#ddd; margin: 5px 0;"></div>
+            <button class="tool-btn" id="tool-rect" title="Rectangle"><i class="far fa-square"></i></button>
+            <button class="tool-btn" id="tool-circle" title="Circle"><i class="far fa-circle"></i></button>
+            <button class="tool-btn" id="tool-text" title="Text (T)"><i class="fas fa-font"></i></button>
+            <div style="height:1px; width:30px; background:#ddd; margin: 5px 0;"></div>
+            <button class="tool-btn" id="tool-undo" title="Undo (Ctrl+Z)"><i class="fas fa-undo"></i></button>
+            <button class="tool-btn" id="tool-redo" title="Redo (Ctrl+Y)"><i class="fas fa-redo"></i></button>
+            <button class="tool-btn" id="tool-clear" title="Clear Page"><i class="fas fa-trash-alt"></i></button>
         </div>
 
-        <!-- Properties Bar -->
+        <!-- Properties -->
         <div id="properties-bar">
             <!-- Colors -->
             <div class="color-swatch active" style="background: #000000;" data-color="#000000"></div>
-            <div class="color-swatch" style="background: #c0392b;" data-color="#c0392b"></div>
-            <div class="color-swatch" style="background: #2980b9;" data-color="#2980b9"></div>
-            <div class="color-swatch" style="background: #27ae60;" data-color="#27ae60"></div>
+            <div class="color-swatch" style="background: #e74c3c;" data-color="#e74c3c"></div>
+            <div class="color-swatch" style="background: #3498db;" data-color="#3498db"></div>
+            <div class="color-swatch" style="background: #2ecc71;" data-color="#2ecc71"></div>
             <div class="color-swatch" style="background: #f1c40f;" data-color="#f1c40f"></div>
             
-            <div style="width: 1px; height: 20px; background: #ddd; margin: 0 10px;"></div>
+            <div class="divider"></div>
             
             <!-- Size -->
             <i class="fas fa-circle" style="font-size: 0.5rem; color: #7f8c8d;"></i>
-            <input type="range" id="size-slider" min="1" max="50" value="3">
+            <input type="range" id="size-slider" min="1" max="50" value="3" style="width:100px;">
             <i class="fas fa-circle" style="font-size: 1.2rem; color: #7f8c8d;"></i>
             
-            <div style="width: 1px; height: 20px; background: #ddd; margin: 0 10px;"></div>
+            <div class="divider"></div>
 
             <!-- Backgrounds -->
-            <select id="bg-select" style="padding: 5px;">
+            <select id="bg-select" style="padding: 5px; border-radius:4px; border:1px solid #ccc;">
                 <option value="white">White</option>
                 <option value="grid">Grid</option>
                 <option value="lines">Lined</option>
@@ -321,236 +230,215 @@
     </div>
 
     <!-- =========================================
-         3. APPLICATION LOGIC
+         2. LOGIC
          ========================================= -->
     <script>
-    /**
-     * OpenFlipchart Core Application
-     * Handles Stage, Tools, Pages, and History
-     */
     class WhiteboardApp {
         constructor() {
             this.canvas = null;
-            this.pages = []; // Array of JSON objects
+            this.pages = []; 
             this.currentPageIndex = 0;
-            this.history = [];
-            this.historyIndex = -1;
+            
+            // History Stacks
+            this.undoStack = [];
+            this.redoStack = [];
+            this.historyProcessing = false; // Lock to prevent loops
             
             // App State
-            this.currentMode = 'select'; // select, pen, highlighter, eraser, shape
+            this.currentMode = 'select'; 
             this.currentColor = '#000000';
             this.currentSize = 3;
-            this.isHighlighter = false;
 
             this.init();
         }
 
         init() {
-            // 1. Setup Fabric Canvas
+            // Setup Fabric
             this.canvas = new fabric.Canvas('c', {
                 isDrawingMode: false,
                 backgroundColor: '#ffffff',
                 selection: true,
-                preserveObjectStacking: true // Selected object stays in z-index order
+                preserveObjectStacking: true
             });
 
-            // 2. Setup Resize Observer (Fixes the "Small Canvas" bug)
+            // Make Canvas Responsive
             this.setupResponsiveCanvas();
 
-            // 3. Initialize Events
+            // Bind Events (Clicks, Keys)
             this.bindEvents();
+            
+            // Bind Canvas History Events
+            this.bindHistoryEvents();
 
-            // 4. Create First Page
+            // Initialize Page 1
             this.addNewPage();
 
-            // 5. Start in Pen Mode (User preference)
+            // Default to Pen
             this.setTool('pen');
         }
 
+        /* ==========================
+           HISTORY SYSTEM (UNDO/REDO)
+           ========================== */
+        
+        saveState() {
+            if(this.historyProcessing) return;
+            
+            // Limit stack size to 50 to prevent memory issues
+            if (this.undoStack.length > 50) this.undoStack.shift();
+            
+            // Push current JSON to stack
+            this.undoStack.push(JSON.stringify(this.canvas.toJSON()));
+            
+            // Clear Redo stack on new action
+            this.redoStack = [];
+        }
+
+        undo() {
+            if (this.undoStack.length === 0) return;
+            
+            this.historyProcessing = true;
+            
+            // 1. Push current state to Redo
+            this.redoStack.push(JSON.stringify(this.canvas.toJSON()));
+            
+            // 2. Pop previous state
+            const prevState = this.undoStack.pop();
+            
+            // 3. Load it
+            this.canvas.loadFromJSON(prevState, () => {
+                this.canvas.renderAll();
+                this.historyProcessing = false;
+                
+                // Re-apply brush settings because loadFromJSON resets them
+                this.updateBrushSettings(); 
+            });
+        }
+
+        redo() {
+            if (this.redoStack.length === 0) return;
+            
+            this.historyProcessing = true;
+            
+            // 1. Push current to Undo
+            this.undoStack.push(JSON.stringify(this.canvas.toJSON()));
+            
+            // 2. Pop next state
+            const nextState = this.redoStack.pop();
+            
+            // 3. Load it
+            this.canvas.loadFromJSON(nextState, () => {
+                this.canvas.renderAll();
+                this.historyProcessing = false;
+                this.updateBrushSettings();
+            });
+        }
+
+        bindHistoryEvents() {
+            // Save state on any modification
+            this.canvas.on('object:added', () => this.saveState());
+            this.canvas.on('object:modified', () => this.saveState());
+            this.canvas.on('object:removed', () => this.saveState());
+            // Note: path:created triggers object:added, so we are covered for drawing
+        }
+
+        /* ==========================
+           CANVAS & TOOLS
+           ========================== */
+
         setupResponsiveCanvas() {
             const stage = document.getElementById('canvas-stage');
-            
-            // Observer monitors the div size change
-            const resizeObserver = new ResizeObserver(() => {
+            const resize = () => {
                 this.canvas.setWidth(stage.clientWidth);
                 this.canvas.setHeight(stage.clientHeight);
                 this.canvas.renderAll();
-                this.updateBackground(); // Re-render grid if needed
-            });
-            
-            resizeObserver.observe(stage);
+                this.updateBackground();
+            };
+            new ResizeObserver(resize).observe(stage);
         }
-
-        /* ==========================
-           PAGE MANAGEMENT
-           ========================== */
-        
-        saveCurrentPage() {
-            // Serialize current canvas to JSON and store in pages array
-            const json = this.canvas.toJSON();
-            this.pages[this.currentPageIndex] = json;
-            this.updateThumbnail(this.currentPageIndex);
-        }
-
-        loadPage(index) {
-            if (index < 0 || index >= this.pages.length) return;
-            
-            // Save old page first
-            this.saveCurrentPage();
-
-            this.currentPageIndex = index;
-            
-            // Load new page data
-            const pageData = this.pages[index];
-            this.canvas.loadFromJSON(pageData, () => {
-                this.canvas.renderAll();
-                this.updateUIForPage();
-            });
-        }
-
-        addNewPage() {
-            // Save current before leaving
-            if (this.pages.length > 0) this.saveCurrentPage();
-
-            // Create blank page data
-            const blankPage = { version: "5.3.0", objects: [], background: "#ffffff" };
-            this.pages.push(blankPage);
-            
-            // Render UI List
-            this.renderPageList();
-            
-            // Switch to it
-            this.loadPage(this.pages.length - 1);
-        }
-
-        renderPageList() {
-            const list = document.getElementById('page-list');
-            list.innerHTML = '';
-
-            this.pages.forEach((page, idx) => {
-                const div = document.createElement('div');
-                div.className = `page-thumbnail ${idx === this.currentPageIndex ? 'active' : ''}`;
-                div.innerHTML = `
-                    <i class="far fa-file"></i>
-                    <span class="page-number">${idx + 1}</span>
-                `;
-                div.onclick = () => this.loadPage(idx);
-                list.appendChild(div);
-            });
-        }
-
-        updateThumbnail(index) {
-            // Advanced: In a real app, we would generate a dataURL of the canvas
-            // and set it as the background image of the thumbnail div.
-        }
-
-        updateUIForPage() {
-            // Update active class in sidebar
-            const thumbs = document.querySelectorAll('.page-thumbnail');
-            thumbs.forEach((t, i) => {
-                if (i === this.currentPageIndex) t.classList.add('active');
-                else t.classList.remove('active');
-            });
-            
-            // Restore tool state (Fabric resets drawing mode on load)
-            this.setTool(this.currentMode);
-        }
-
-        /* ==========================
-           TOOL LOGIC
-           ========================== */
 
         setTool(mode) {
-            // UI Update
+            // Visual Update
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
             const btn = document.getElementById(`tool-${mode}`);
-            if (btn) btn.classList.add('active');
+            if(btn) btn.classList.add('active');
 
             this.currentMode = mode;
             this.canvas.isDrawingMode = false;
             this.canvas.selection = true;
             this.canvas.defaultCursor = 'default';
+            this.canvas.off('mouse:down'); // Remove shape listeners
 
-            // Remove existing shape listeners
-            this.canvas.off('mouse:down');
-
-            switch(mode) {
-                case 'select':
-                    // Default behavior
-                    break;
-
-                case 'pen':
-                    this.canvas.isDrawingMode = true;
-                    this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas);
-                    this.canvas.freeDrawingBrush.color = this.currentColor;
-                    this.canvas.freeDrawingBrush.width = parseInt(this.currentSize, 10);
-                    break;
-
-                case 'highlighter':
-                    this.canvas.isDrawingMode = true;
-                    this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas);
-                    // Highlighter color is current color but with transparency
-                    const c = new fabric.Color(this.currentColor);
-                    this.canvas.freeDrawingBrush.color = c.setAlpha(0.3).toRgba();
-                    this.canvas.freeDrawingBrush.width = parseInt(this.currentSize, 10) * 3;
-                    break;
-
-                case 'eraser':
-                    this.canvas.isDrawingMode = true;
-                    this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas);
-                    this.canvas.freeDrawingBrush.color = '#ffffff'; // Hacky eraser (paints white)
-                    // Better eraser would be 'destination-out' composite, but keeping simple for now
-                    this.canvas.freeDrawingBrush.width = 30;
-                    break;
-
-                case 'rect':
-                case 'circle':
-                    this.canvas.selection = false;
-                    this.canvas.defaultCursor = 'crosshair';
-                    this.setupShapeDrawer(mode);
-                    break;
+            if (mode === 'pen' || mode === 'highlighter') {
+                this.canvas.isDrawingMode = true;
+                this.canvas.selection = false;
+                this.updateBrushSettings(); // Set color/width
+            } 
+            else if (mode === 'eraser') {
+                this.canvas.isDrawingMode = true;
+                this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas);
+                this.canvas.freeDrawingBrush.color = '#ffffff'; 
+                this.canvas.freeDrawingBrush.width = 30;
+            }
+            else if (mode === 'rect' || mode === 'circle') {
+                this.canvas.selection = false;
+                this.canvas.defaultCursor = 'crosshair';
+                this.setupShapeDrawer(mode);
             }
         }
 
-        setupShapeDrawer(shapeType) {
-            let rect, isDown, origX, origY;
+        updateBrushSettings() {
+            // Used to re-apply pen settings after Undo/Redo or Color Change
+            if (!this.canvas.freeDrawingBrush) return;
 
+            if (this.currentMode === 'pen') {
+                this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas);
+                this.canvas.freeDrawingBrush.color = this.currentColor;
+                this.canvas.freeDrawingBrush.width = parseInt(this.currentSize, 10);
+                // Decimate creates smoother lines by ignoring points closer than 2.5px
+                this.canvas.freeDrawingBrush.decimate = 2.5; 
+            } 
+            else if (this.currentMode === 'highlighter') {
+                this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas);
+                const c = new fabric.Color(this.currentColor);
+                this.canvas.freeDrawingBrush.color = c.setAlpha(0.3).toRgba();
+                this.canvas.freeDrawingBrush.width = parseInt(this.currentSize, 10) * 3;
+                this.canvas.freeDrawingBrush.decimate = 2.5;
+            }
+        }
+
+        setupShapeDrawer(type) {
+            let rect, isDown, origX, origY;
+            
             this.canvas.on('mouse:down', (o) => {
                 isDown = true;
                 const pointer = this.canvas.getPointer(o.e);
-                origX = pointer.x;
-                origY = pointer.y;
-
-                if (shapeType === 'rect') {
+                origX = pointer.x; origY = pointer.y;
+                
+                if (type === 'rect') {
                     rect = new fabric.Rect({
-                        left: origX, top: origY, originX: 'left', originY: 'top',
-                        width: pointer.x - origX, height: pointer.y - origY,
-                        angle: 0, fill: this.currentColor, transparentCorners: false
+                        left: origX, top: origY, width: 0, height: 0,
+                        fill: this.currentColor, strokeWidth: 0
                     });
-                } else if (shapeType === 'circle') {
+                } else {
                     rect = new fabric.Circle({
-                        left: origX, top: origY, originX: 'left', originY: 'top',
-                        radius: 1, fill: this.currentColor, selectable: false
+                        left: origX, top: origY, radius: 1,
+                        fill: this.currentColor, originX: 'left', originY: 'top'
                     });
                 }
-
                 this.canvas.add(rect);
             });
 
             this.canvas.on('mouse:move', (o) => {
                 if (!isDown) return;
                 const pointer = this.canvas.getPointer(o.e);
-
-                if (shapeType === 'rect') {
-                    if (origX > pointer.x) { rect.set({ left: Math.abs(pointer.x) }); }
-                    if (origY > pointer.y) { rect.set({ top: Math.abs(pointer.y) }); }
-                    rect.set({ width: Math.abs(origX - pointer.x) });
-                    rect.set({ height: Math.abs(origY - pointer.y) });
-                } else if (shapeType === 'circle') {
+                if (type === 'rect') {
+                    if (origX > pointer.x) rect.set({ left: Math.abs(pointer.x) });
+                    if (origY > pointer.y) rect.set({ top: Math.abs(pointer.y) });
+                    rect.set({ width: Math.abs(origX - pointer.x), height: Math.abs(origY - pointer.y) });
+                } else {
                     const radius = Math.abs(origX - pointer.x) / 2;
-                    if (radius > 0) {
-                        rect.set({ radius: radius });
-                    }
+                    rect.set({ radius: radius });
                 }
                 this.canvas.renderAll();
             });
@@ -558,89 +446,118 @@
             this.canvas.on('mouse:up', () => {
                 isDown = false;
                 rect.setCoords();
-                // Auto switch back to select
-                this.setTool('select');
+                this.saveState(); // Explicit save for shapes
+                this.setTool('select'); // Auto-revert
             });
-        }
-
-        addText() {
-            const text = new fabric.IText('Double click to edit', {
-                left: 100, top: 100,
-                fill: this.currentColor,
-                fontSize: 24,
-                fontFamily: 'Arial'
-            });
-            this.canvas.add(text);
-            this.canvas.setActiveObject(text);
-            this.setTool('select');
         }
 
         /* ==========================
-           BACKGROUNDS
+           PAGE MANAGEMENT
            ========================== */
         
-        setBackground(type) {
-            // Remove previous background objects if any (simple implementation)
-            this.canvas.setBackgroundColor('#ffffff', this.canvas.renderAll.bind(this.canvas));
+        saveCurrentPage() {
+            this.pages[this.currentPageIndex] = this.canvas.toJSON();
+        }
+
+        loadPage(index) {
+            this.saveCurrentPage(); // Save old
+            this.currentPageIndex = index;
             
+            this.canvas.loadFromJSON(this.pages[index], () => {
+                this.canvas.renderAll();
+                this.updateUIForPage();
+                // Reset history for new page? Or keep it?
+                // Usually easier to reset history per page for now
+                this.undoStack = []; 
+                this.redoStack = [];
+                // Ensure tool is consistent
+                this.setTool(this.currentMode);
+            });
+        }
+
+        addNewPage() {
+            if (this.pages.length > 0) this.saveCurrentPage();
+            const blank = { version: "5.3.0", objects: [], background: "#ffffff" };
+            this.pages.push(blank);
+            this.renderPageList();
+            this.loadPage(this.pages.length - 1);
+        }
+
+        renderPageList() {
+            const list = document.getElementById('page-list');
+            list.innerHTML = '';
+            this.pages.forEach((p, i) => {
+                const div = document.createElement('div');
+                div.className = `page-thumbnail ${i === this.currentPageIndex ? 'active' : ''}`;
+                div.innerHTML = `<i class="far fa-file"></i><span class="page-number">${i+1}</span>`;
+                div.onclick = () => this.loadPage(i);
+                list.appendChild(div);
+            });
+        }
+
+        updateUIForPage() {
+            const thumbs = document.querySelectorAll('.page-thumbnail');
+            thumbs.forEach((t, i) => {
+                if (i === this.currentPageIndex) t.classList.add('active');
+                else t.classList.remove('active');
+            });
+            this.updateBackground();
+        }
+
+        updateBackground() {
+            // Helper to redraw grid if needed (not fully implemented in this snippet for brevity, 
+            // but structure is here)
+             const val = document.getElementById('bg-select').value;
+             this.setBackground(val);
+        }
+
+        setBackground(type) {
+            this.canvas.setBackgroundColor('#ffffff', this.canvas.renderAll.bind(this.canvas));
             if (type === 'blue') {
                 this.canvas.setBackgroundColor('#81ecec', this.canvas.renderAll.bind(this.canvas));
-            } 
-            else if (type === 'grid') {
-                // Create grid pattern
+            } else if (type === 'grid') {
+                // simple grid logic
                 const patternCanvas = document.createElement('canvas');
                 patternCanvas.width = 40; patternCanvas.height = 40;
                 const ctx = patternCanvas.getContext('2d');
-                ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1;
-                ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(40, 0);
-                ctx.moveTo(0, 0); ctx.lineTo(0, 40); ctx.stroke();
-
-                const pattern = new fabric.Pattern({ source: patternCanvas, repeat: 'repeat' });
-                this.canvas.setBackgroundColor(pattern, this.canvas.renderAll.bind(this.canvas));
-            }
-            else if (type === 'lines') {
-                const patternCanvas = document.createElement('canvas');
-                patternCanvas.width = 40; patternCanvas.height = 40;
-                const ctx = patternCanvas.getContext('2d');
-                ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1;
-                ctx.beginPath(); ctx.moveTo(0, 39); ctx.lineTo(40, 39); ctx.stroke();
-                
+                ctx.strokeStyle = '#eee'; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(40,0); ctx.moveTo(0,0); ctx.lineTo(0,40); ctx.stroke();
                 const pattern = new fabric.Pattern({ source: patternCanvas, repeat: 'repeat' });
                 this.canvas.setBackgroundColor(pattern, this.canvas.renderAll.bind(this.canvas));
             }
         }
 
         /* ==========================
-           EVENTS & BINDING
+           INPUT BINDING
            ========================== */
-
+        
         bindEvents() {
-            // Toolbar
-            document.getElementById('tool-select').onclick = () => this.setTool('select');
-            document.getElementById('tool-pen').onclick = () => this.setTool('pen');
-            document.getElementById('tool-highlighter').onclick = () => this.setTool('highlighter');
-            document.getElementById('tool-eraser').onclick = () => this.setTool('eraser');
-            document.getElementById('tool-rect').onclick = () => this.setTool('rect');
-            document.getElementById('tool-circle').onclick = () => this.setTool('circle');
-            document.getElementById('tool-text').onclick = () => this.addText();
-            
-            document.getElementById('tool-undo').onclick = () => {
-                // Basic undo implementation requires a robust history stack
-                // For this demo, we'll just alert.
-                alert("Undo functionality requires a deep history stack implementation.");
+            // Tool Buttons
+            ['select','pen','highlighter','eraser','rect','circle'].forEach(t => {
+                document.getElementById(`tool-${t}`).onclick = () => this.setTool(t);
+            });
+
+            document.getElementById('tool-text').onclick = () => {
+                const text = new fabric.IText('Text', { 
+                    left: 200, top: 200, fill: this.currentColor, fontSize: 40 
+                });
+                this.canvas.add(text);
+                this.canvas.setActiveObject(text);
+                this.setTool('select');
             };
-            
+
+            // Undo/Redo/Clear Buttons
+            document.getElementById('tool-undo').onclick = () => this.undo();
+            document.getElementById('tool-redo').onclick = () => this.redo();
             document.getElementById('tool-clear').onclick = () => {
-                if (confirm('Clear this page?')) {
-                    this.canvas.clear();
-                    this.setBackground(document.getElementById('bg-select').value);
+                if(confirm('Clear Page?')) { 
+                    this.canvas.clear(); 
+                    this.saveState(); // Clearing is a state change
+                    this.updateBackground();
                 }
             };
 
-            // Sidebar
-            document.getElementById('add-page-btn').onclick = () => this.addNewPage();
-
-            // Properties
+            // Color Picker (BUG FIX IMPLEMENTED)
             document.querySelectorAll('.color-swatch').forEach(swatch => {
                 swatch.onclick = (e) => {
                     // UI
@@ -649,91 +566,86 @@
                     
                     // Logic
                     this.currentColor = e.target.getAttribute('data-color');
-                    if (this.currentMode === 'pen') {
-                        this.canvas.freeDrawingBrush.color = this.currentColor;
-                    }
                     
-                    // Update active object
+                    // Apply to selection
                     const active = this.canvas.getActiveObject();
                     if (active) {
                         active.set({ fill: this.currentColor });
-                        if(active.type === 'path') active.set({ stroke: this.currentColor });
+                        if (active.type === 'path') active.set({ stroke: this.currentColor });
                         this.canvas.renderAll();
+                        this.saveState();
+                    }
+
+                    // Keep Pen Active & Updated
+                    if (this.currentMode === 'pen' || this.currentMode === 'highlighter') {
+                        this.canvas.isDrawingMode = true; // Ensure mode stays
+                        this.updateBrushSettings();       // Apply new color
                     }
                 };
             });
 
+            // Size Slider
             document.getElementById('size-slider').addEventListener('input', (e) => {
                 this.currentSize = e.target.value;
-                if(this.canvas.freeDrawingBrush) {
-                    this.canvas.freeDrawingBrush.width = parseInt(this.currentSize, 10);
+                this.updateBrushSettings();
+            });
+            
+            // Background
+            document.getElementById('bg-select').addEventListener('change', (e) => this.setBackground(e.target.value));
+
+            // Sidebar
+            document.getElementById('add-page-btn').onclick = () => this.addNewPage();
+
+            // Keyboard Shortcuts
+            document.addEventListener('keydown', (e) => {
+                // Undo/Redo
+                if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); this.undo(); }
+                if ((e.ctrlKey || e.metaKey) && e.key === 'y') { e.preventDefault(); this.redo(); }
+                
+                // Delete
+                if (e.key === 'Delete' || e.key === 'Backspace') {
+                    const active = this.canvas.getActiveObjects();
+                    if (active.length && !this.canvas.isDrawingMode) {
+                        this.canvas.discardActiveObject();
+                        active.forEach(obj => this.canvas.remove(obj));
+                        this.saveState();
+                    }
                 }
             });
 
-            document.getElementById('bg-select').addEventListener('change', (e) => {
-                this.setBackground(e.target.value);
-            });
-
-            // File I/O
+            // File Export/Import
             document.getElementById('btn-export').onclick = () => {
-                this.saveCurrentPage(); // Ensure latest state is saved
-                const project = {
-                    version: "1.0",
-                    created: Date.now(),
-                    pages: this.pages
-                };
-                const blob = new Blob([JSON.stringify(project)], {type: "application/json"});
-                const link = document.createElement('a');
-                link.download = "project.json";
-                link.href = URL.createObjectURL(blob);
-                link.click();
+                this.saveCurrentPage();
+                const blob = new Blob([JSON.stringify({version:"1.0", pages:this.pages})], {type:"application/json"});
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = "lesson.json";
+                a.click();
             };
-
-            const fileInput = document.getElementById('file-input');
-            document.getElementById('btn-import').onclick = () => fileInput.click();
-            fileInput.onchange = (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (f) => {
+            
+            const fIn = document.getElementById('file-input');
+            document.getElementById('btn-import').onclick = () => fIn.click();
+            fIn.onchange = (e) => {
+                const r = new FileReader();
+                r.onload = (res) => {
                     try {
-                        const project = JSON.parse(f.target.result);
-                        if (project.pages && Array.isArray(project.pages)) {
-                            this.pages = project.pages;
+                        const data = JSON.parse(res.target.result);
+                        if(data.pages) {
+                            this.pages = data.pages;
                             this.currentPageIndex = 0;
                             this.renderPageList();
                             this.loadPage(0);
                         }
-                    } catch (err) {
-                        alert("Invalid project file.");
-                    }
+                    } catch(err){ alert("Error loading file"); }
                 };
-                reader.readAsText(file);
+                if(e.target.files[0]) r.readAsText(e.target.files[0]);
                 e.target.value = '';
             };
-            
-            // Keyboard Shortcuts
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Delete' || e.key === 'Backspace') {
-                    const active = this.canvas.getActiveObjects();
-                    if (active.length) {
-                        this.canvas.discardActiveObject();
-                        active.forEach((obj) => {
-                            this.canvas.remove(obj);
-                        });
-                    }
-                }
-            });
         }
     }
 
-    // =========================================
-    // 4. BOOTSTRAP
-    // =========================================
-    window.addEventListener('load', () => {
-        window.app = new WhiteboardApp();
-    });
-
+    // Bootstrap
+    window.onload = () => window.app = new WhiteboardApp();
     </script>
 </body>
 </html>
