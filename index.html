@@ -2,689 +2,713 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- Critical for ActivBoards: Prevent scaling/scrolling while drawing -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OpenFlipchart Studio</title>
+    <title>OpenFlipchart Studio v4</title>
     
+    <!-- Fabric.js Core -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <!-- Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     
     <style>
         /* =========================================
-           1. THEME & LARGE SCREEN OPTIMIZATION
+           1. CSS VARIABLES & THEME
            ========================================= */
         :root {
-            --bg-dark: #2d3436;
-            --bg-panel: #ecf0f1;
-            --accent: #e67e22; /* Promethean Orange */
-            --accent-hover: #d35400;
-            --header-height: 60px; /* Taller for easier touch */
-            --sidebar-width: 240px;
-            --z-canvas: 1;
-            --z-overlay: 100;
-            --z-ui: 500;
+            --bg-dark: #2c3e50;
+            --bg-light: #ecf0f1;
+            --accent-design: #e67e22; /* Orange for Editing */
+            --accent-present: #2980b9; /* Blue for Presenting */
+            --toolbar-bg: #ffffff;
+            --text-color: #2c3e50;
+            --header-height: 55px;
+            --sidebar-width: 260px;
         }
 
-        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
-        
         body, html {
-            width: 100%; height: 100%; margin: 0; padding: 0;
+            margin: 0; padding: 0; width: 100%; height: 100%;
             font-family: 'Segoe UI', sans-serif;
             background-color: var(--bg-dark);
-            overflow: hidden; /* No scrollbars ever */
+            overflow: hidden;
+            user-select: none; -webkit-user-select: none;
             display: flex; flex-direction: column;
         }
+
+        /* Mode Indicator Border */
+        body.mode-design { border: 4px solid var(--accent-design); }
+        body.mode-present { border: 4px solid var(--accent-present); }
 
         /* HEADER */
         header {
             height: var(--header-height);
             background: #34495e; color: white;
             display: flex; align-items: center; justify-content: space-between;
-            padding: 0 20px; border-bottom: 1px solid #2c3e50; z-index: var(--z-ui);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            padding: 0 15px; z-index: 500;
         }
-        .brand { font-size: 1.4rem; font-weight: bold; display: flex; align-items: center; gap: 10px; }
-        
-        .toolbar-top button {
-            background: #465a6e; border: 1px solid rgba(0,0,0,0.2);
-            color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer;
-            margin-left: 8px; font-size: 1rem; font-weight: 500;
-            transition: background 0.2s;
+        .mode-switch {
+            background: rgba(0,0,0,0.3); padding: 4px; border-radius: 20px;
+            display: flex; gap: 5px;
         }
-        .toolbar-top button:hover { background: var(--accent); }
+        .mode-btn {
+            padding: 6px 12px; border-radius: 16px; border: none; cursor: pointer;
+            font-size: 0.85rem; font-weight: bold; color: #ccc; background: transparent;
+        }
+        .mode-btn.active { color: white; background: rgba(255,255,255,0.2); }
+        body.mode-design .mode-btn.design-btn { color: var(--accent-design); background: white; }
+        body.mode-present .mode-btn.present-btn { color: var(--accent-present); background: white; }
 
-        /* MAIN LAYOUT */
+        /* APP LAYOUT */
         #app-container {
-            display: flex; flex: 1; position: relative;
-            height: calc(100% - var(--header-height));
+            display: flex; flex: 1; height: calc(100% - var(--header-height));
+            position: relative;
         }
 
-        /* SIDEBAR (Pages) */
+        /* SIDEBAR (Browser) */
         #sidebar {
-            width: var(--sidebar-width); background: var(--bg-panel);
-            border-right: 1px solid #bdc3c7;
-            display: flex; flex-direction: column; padding: 15px; overflow-y: auto;
-            z-index: var(--z-ui);
+            width: var(--sidebar-width); background: var(--bg-light);
+            border-right: 1px solid #bdc3c7; display: flex; flex-direction: column;
+            z-index: 400; transition: transform 0.3s;
         }
-        .page-thumbnail {
-            width: 100%; height: 140px; background: white;
-            border: 4px solid #bdc3c7; margin-bottom: 15px;
-            cursor: pointer; position: relative;
+        .sidebar-tabs {
+            display: flex; border-bottom: 1px solid #ccc; background: #e0e0e0;
+        }
+        .tab-btn {
+            flex: 1; padding: 10px; border: none; background: transparent;
+            cursor: pointer; font-weight: bold; color: #7f8c8d;
+            border-bottom: 3px solid transparent;
+        }
+        .tab-btn.active {
+            background: var(--bg-light); color: var(--text-color);
+            border-bottom-color: var(--accent-design);
+        }
+        .sidebar-content {
+            flex: 1; overflow-y: auto; padding: 10px; display: none;
+        }
+        .sidebar-content.active { display: block; }
+
+        /* Page Thumbnails */
+        .page-thumb {
+            height: 140px; background: white; border: 3px solid #ccc;
+            margin-bottom: 15px; position: relative; cursor: pointer;
             display: flex; align-items: center; justify-content: center;
-            font-size: 2rem; color: #ddd; border-radius: 4px;
+            font-size: 1.5rem; color: #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
-        .page-thumbnail.active { border-color: var(--accent); }
-        .page-num {
+        .page-thumb.active { border-color: var(--accent-design); }
+        .page-badge {
             position: absolute; bottom: 5px; right: 5px;
-            background: var(--accent); color: white;
-            width: 25px; height: 25px; border-radius: 50%;
+            background: #555; color: white; padding: 2px 6px;
+            font-size: 0.8rem; border-radius: 4px;
+        }
+
+        /* Library Items */
+        .lib-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .lib-item {
+            height: 60px; background: white; border: 1px solid #ccc;
             display: flex; align-items: center; justify-content: center;
-            font-size: 0.9rem; font-weight: bold;
+            cursor: grab; font-size: 1.5rem; color: #333;
+            transition: transform 0.1s;
         }
+        .lib-item:hover { transform: scale(1.05); border-color: #999; }
+        .lib-item:active { cursor: grabbing; }
 
-        /* CANVAS AREA */
-        #canvas-stage {
-            flex: 1; background-color: #95a5a6;
-            position: relative; overflow: hidden;
-            touch-action: none; /* KEY: Prevents pen from scrolling page */
+        /* CANVAS */
+        #canvas-wrapper {
+            flex: 1; position: relative; background: #95a5a6;
+            overflow: hidden; touch-action: none;
         }
+        /* Trash Zone */
+        #trash-can {
+            position: absolute; bottom: 20px; right: 20px;
+            width: 70px; height: 70px; border-radius: 50%;
+            background: rgba(192, 57, 43, 0.8); color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.8rem; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            z-index: 300; transition: transform 0.2s;
+            pointer-events: none; /* Logic handled via canvas events */
+            opacity: 0.6;
+        }
+        #trash-can.hover { transform: scale(1.2); opacity: 1; background: #e74c3c; }
 
-        /* FLOATING STUDIO TOOLBAR */
+        /* FLOATING TOOLBAR */
         #main-toolbar {
             position: absolute; top: 20px; right: 20px;
-            width: 70px; /* Wider for big fingers */
-            background: white;
-            border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.3);
-            padding: 15px 0; display: flex; flex-direction: column; align-items: center; gap: 8px;
-            z-index: var(--z-ui);
+            width: 60px; background: white; border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+            display: flex; flex-direction: column; align-items: center;
+            padding: 10px 0; gap: 5px; z-index: 300;
         }
         .tool-btn {
-            width: 50px; height: 50px; /* Big targets */
-            border: none; background: transparent;
-            border-radius: 8px; cursor: pointer; color: #2c3e50; font-size: 1.4rem;
-            transition: all 0.1s;
+            width: 44px; height: 44px; border: none; background: transparent;
+            border-radius: 6px; font-size: 1.2rem; color: #333; cursor: pointer;
         }
-        .tool-btn:hover { background: #dfe6e9; transform: scale(1.1); }
-        .tool-btn.active { background: #ffeaa7; color: #d35400; border: 3px solid var(--accent); }
-        .sep { width: 40px; height: 2px; background: #eee; margin: 5px 0; }
+        .tool-btn:hover { background: #eee; }
+        .tool-btn.active { background: #ffeaa7; color: #d35400; border: 2px solid var(--accent-design); }
+        .sep { width: 40px; height: 1px; background: #ddd; margin: 5px 0; }
 
-        /* COLORS / PROPERTIES */
+        /* PROPERTIES BAR */
         #properties-bar {
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            background: white; padding: 15px 25px; border-radius: 16px;
-            box-shadow: 0 5px 25px rgba(0,0,0,0.3);
-            display: flex; flex-direction: column; align-items: center; gap: 10px;
-            z-index: var(--z-ui);
+            background: white; padding: 10px 20px; border-radius: 50px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+            display: flex; align-items: center; gap: 12px; z-index: 300;
         }
-        .color-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; }
-        .color-swatch {
-            width: 32px; height: 32px; border-radius: 4px; cursor: pointer;
-            border: 2px solid rgba(0,0,0,0.1);
+        .color-dot {
+            width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
+            border: 2px solid transparent;
         }
-        .color-swatch.active { transform: scale(1.2); border: 3px solid #333; z-index: 2; }
+        .color-dot.active { transform: scale(1.2); border-color: #333; }
 
-        /* TRASH CAN (Drop Zone) */
-        #trash-zone {
-            position: absolute; bottom: 20px; right: 20px;
-            width: 80px; height: 80px;
-            background: rgba(231, 76, 60, 0.8);
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 2rem;
-            z-index: var(--z-ui);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            transition: transform 0.2s;
+        /* CONTEXT MENU (Right Click) */
+        #context-menu {
+            position: absolute; background: white; width: 180px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2); border-radius: 4px;
+            display: none; flex-direction: column; z-index: 1000;
+            padding: 5px 0; font-size: 0.9rem;
         }
-        #trash-zone:hover { transform: scale(1.1); background: #c0392b; }
+        .ctx-item {
+            padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px;
+            color: #333;
+        }
+        .ctx-item:hover { background: #f1f2f6; }
+        .ctx-item i { width: 20px; text-align: center; color: #7f8c8d; }
+        .ctx-sep { height: 1px; background: #eee; margin: 4px 0; }
 
-        /* OVERLAYS */
-        #overlay-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: var(--z-overlay); overflow: hidden;
-        }
-        .floating-tool {
-            position: absolute; pointer-events: auto;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            cursor: grab;
-        }
-        
-        /* Specific Tools */
-        .tool-dice {
-            width: 100px; height: 100px; background: white;
-            border-radius: 16px; border: 4px solid #333;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 3rem; font-weight: bold; cursor: pointer;
-        }
-        .tool-clock {
-            padding: 15px; background: #222; color: #0f0; border-radius: 10px; border: 4px solid #555;
-            text-align: center; font-family: monospace;
-        }
-        .tool-ruler {
-            width: 600px; height: 90px; background: rgba(255,255,230,0.95);
-            border: 1px solid #999; display: flex; align-items: flex-end;
-        }
-        .ruler-marks {
-            width: 100%; height: 40px;
-            background-image: repeating-linear-gradient(90deg, #333 0, #333 2px, transparent 2px, transparent 20px);
-        }
-
-        /* Laser Pointer Trail */
-        .laser-trail { pointer-events: none; }
     </style>
 </head>
-<body>
+<body class="mode-design">
 
     <!-- Header -->
     <header>
-        <div class="brand"><i class="fas fa-chalkboard-teacher"></i> &nbsp; OpenFlipchart Studio</div>
-        <div class="toolbar-top">
-            <button onclick="app.toggleTool('ruler')"><i class="fas fa-ruler-horizontal"></i> Ruler</button>
-            <button onclick="app.toggleTool('dice')"><i class="fas fa-dice"></i> Dice</button>
-            <button onclick="app.toggleTool('clock')"><i class="fas fa-clock"></i> Timer</button>
-            <span style="border-left:1px solid #aaa; margin:0 10px; height:20px;"></span>
-            <button id="btn-import"><i class="fas fa-folder-open"></i> Import</button>
-            <button id="btn-export"><i class="fas fa-save"></i> Save</button>
-            <input type="file" id="file-input" hidden accept=".json">
+        <div style="font-weight:bold; font-size:1.2rem;">
+            <i class="fas fa-chalkboard"></i> OpenFlipchart <span style="font-weight:normal; font-size:0.8rem; opacity:0.7;">v4.0 Pro</span>
+        </div>
+        
+        <!-- Mode Switcher -->
+        <div class="mode-switch">
+            <button class="mode-btn design-btn active" onclick="app.setMode('design')">DESIGN</button>
+            <button class="mode-btn present-btn" onclick="app.setMode('present')">PRESENT</button>
+        </div>
+
+        <div style="display:flex; gap:10px;">
+            <button onclick="app.io.import()" style="background:#27ae60; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Open</button>
+            <button onclick="app.io.export()" style="background:#2980b9; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Save</button>
         </div>
     </header>
 
     <div id="app-container">
         
         <!-- Sidebar -->
-        <div id="sidebar">
-            <button style="width:100%; padding:12px; background:var(--accent); color:white; border:none; cursor:pointer; font-size:1.1rem; border-radius:6px;" id="add-page-btn">
-                <i class="fas fa-plus"></i> New Page
-            </button>
-            <div id="page-list" style="margin-top:20px;"></div>
-        </div>
-
-        <!-- Canvas Stage -->
-        <div id="canvas-stage">
-            <canvas id="c"></canvas>
+        <aside id="sidebar">
+            <div class="sidebar-tabs">
+                <button class="tab-btn active" onclick="app.ui.switchTab('pages')">Pages</button>
+                <button class="tab-btn" onclick="app.ui.switchTab('lib')">Library</button>
+            </div>
             
-            <!-- Tools Overlay -->
-            <div id="overlay-layer"></div>
-
-            <!-- Trash Can -->
-            <div id="trash-zone" title="Drag here to delete"><i class="fas fa-trash-alt"></i></div>
-        </div>
-
-        <!-- Floating Toolbar -->
-        <div id="main-toolbar">
-            <button class="tool-btn active" id="tool-select" title="Select (V)"><i class="fas fa-mouse-pointer"></i></button>
-            <button class="tool-btn" id="tool-pen" title="Pen (P)"><i class="fas fa-pen"></i></button>
-            <button class="tool-btn" id="tool-highlighter" title="Highlighter"><i class="fas fa-highlighter"></i></button>
-            <button class="tool-btn" id="tool-laser" title="Laser Pointer"><i class="fas fa-magic"></i></button>
-            <button class="tool-btn" id="tool-eraser" title="Eraser"><i class="fas fa-eraser"></i></button>
-            <div class="sep"></div>
-            <button class="tool-btn" id="tool-rect" title="Rectangle"><i class="far fa-square"></i></button>
-            <button class="tool-btn" id="tool-circle" title="Circle"><i class="far fa-circle"></i></button>
-            <button class="tool-btn" id="tool-text" title="Text"><i class="fas fa-font"></i></button>
-            <div class="sep"></div>
-            <button class="tool-btn" id="tool-undo"><i class="fas fa-undo"></i></button>
-            <button class="tool-btn" id="tool-redo"><i class="fas fa-redo"></i></button>
-            <button class="tool-btn" id="tool-clear"><i class="fas fa-bomb"></i></button>
-        </div>
-
-        <!-- Properties Bar -->
-        <div id="properties-bar">
-            <!-- Colors -->
-            <div class="color-grid">
-                <div class="color-swatch active" style="background:#000000" data-color="#000000"></div>
-                <div class="color-swatch" style="background:#7f8c8d" data-color="#7f8c8d"></div>
-                <div class="color-swatch" style="background:#c0392b" data-color="#c0392b"></div>
-                <div class="color-swatch" style="background:#e67e22" data-color="#e67e22"></div>
-                <div class="color-swatch" style="background:#f1c40f" data-color="#f1c40f"></div>
-                <div class="color-swatch" style="background:#27ae60" data-color="#27ae60"></div>
-                <div class="color-swatch" style="background:#2980b9" data-color="#2980b9"></div>
-                <div class="color-swatch" style="background:#8e44ad" data-color="#8e44ad"></div>
-                <!-- Row 2 -->
-                <div class="color-swatch" style="background:#ffffff" data-color="#ffffff"></div>
-                <div class="color-swatch" style="background:#bdc3c7" data-color="#bdc3c7"></div>
-                <div class="color-swatch" style="background:#e74c3c" data-color="#e74c3c"></div>
-                <div class="color-swatch" style="background:#d35400" data-color="#d35400"></div>
-                <div class="color-swatch" style="background:#f39c12" data-color="#f39c12"></div>
-                <div class="color-swatch" style="background:#2ecc71" data-color="#2ecc71"></div>
-                <div class="color-swatch" style="background:#3498db" data-color="#3498db"></div>
-                <div class="color-swatch" style="background:#9b59b6" data-color="#9b59b6"></div>
+            <!-- Pages Tab -->
+            <div id="tab-pages" class="sidebar-content active">
+                <button onclick="app.pages.add()" style="width:100%; padding:10px; background:var(--accent-design); color:white; border:none; margin-bottom:10px; cursor:pointer; font-weight:bold;">+ New Page</button>
+                <div id="page-list"></div>
             </div>
 
-            <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <i class="fas fa-circle" style="font-size:0.5rem; color:#aaa;"></i>
-                    <input type="range" id="size-slider" min="1" max="60" value="3" style="width:150px">
-                    <i class="fas fa-circle" style="font-size:1.5rem; color:#aaa;"></i>
+            <!-- Library Tab -->
+            <div id="tab-lib" class="sidebar-content">
+                <div style="padding:5px; color:#7f8c8d; font-size:0.8rem; margin-bottom:10px;">Drag shapes to canvas</div>
+                <div class="lib-grid">
+                    <div class="lib-item" draggable="true" ondragstart="app.lib.dragStart(event, 'rect')"><i class="far fa-square"></i></div>
+                    <div class="lib-item" draggable="true" ondragstart="app.lib.dragStart(event, 'circle')"><i class="far fa-circle"></i></div>
+                    <div class="lib-item" draggable="true" ondragstart="app.lib.dragStart(event, 'triangle')"><i class="fas fa-caret-up"></i></div>
+                    <div class="lib-item" draggable="true" ondragstart="app.lib.dragStart(event, 'star')"><i class="fas fa-star"></i></div>
+                    <div class="lib-item" draggable="true" ondragstart="app.lib.dragStart(event, 'arrow')"><i class="fas fa-long-arrow-alt-right"></i></div>
+                    <div class="lib-item" draggable="true" ondragstart="app.lib.dragStart(event, 'line')"><i class="fas fa-minus"></i></div>
                 </div>
-                <select id="bg-select" style="padding:8px; border-radius:6px; font-size:1rem;">
-                    <option value="white">White</option>
-                    <option value="grid">Math Grid</option>
-                    <option value="lines">Lined Paper</option>
-                    <option value="blue">Promethean Blue</option>
-                    <option value="black">Chalkboard</option>
-                </select>
             </div>
+        </aside>
+
+        <!-- Canvas -->
+        <main id="canvas-wrapper">
+            <canvas id="c"></canvas>
+            <div id="trash-can"><i class="fas fa-trash"></i></div>
+            
+            <!-- Context Menu -->
+            <div id="context-menu">
+                <div class="ctx-item" onclick="app.ctx.action('lock')"><i class="fas fa-lock"></i> Lock</div>
+                <div class="ctx-item" onclick="app.ctx.action('unlock')"><i class="fas fa-lock-open"></i> Unlock</div>
+                <div class="ctx-sep"></div>
+                <div class="ctx-item" onclick="app.ctx.action('front')"><i class="fas fa-level-up-alt"></i> Bring to Front</div>
+                <div class="ctx-item" onclick="app.ctx.action('back')"><i class="fas fa-level-down-alt"></i> Send to Back</div>
+                <div class="ctx-sep"></div>
+                <div class="ctx-item" onclick="app.ctx.action('clone')"><i class="fas fa-clone"></i> Duplicate</div>
+                <div class="ctx-item" onclick="app.ctx.action('cloner')"><i class="fas fa-stamp"></i> Toggle Infinite Cloner</div>
+                <div class="ctx-sep"></div>
+                <div class="ctx-item" onclick="app.ctx.action('group')"><i class="fas fa-object-group"></i> Group</div>
+                <div class="ctx-item" onclick="app.ctx.action('ungroup')"><i class="fas fa-object-ungroup"></i> Ungroup</div>
+            </div>
+        </main>
+
+        <!-- Toolbar -->
+        <div id="main-toolbar">
+            <button class="tool-btn active" id="btn-select" onclick="app.tools.set('select')"><i class="fas fa-mouse-pointer"></i></button>
+            <button class="tool-btn" id="btn-pen" onclick="app.tools.set('pen')"><i class="fas fa-pen"></i></button>
+            <button class="tool-btn" id="btn-highlighter" onclick="app.tools.set('highlighter')"><i class="fas fa-highlighter"></i></button>
+            <button class="tool-btn" id="btn-eraser" onclick="app.tools.set('eraser')"><i class="fas fa-eraser"></i></button>
+            <div class="sep"></div>
+            <button class="tool-btn" id="btn-text" onclick="app.tools.addText()"><i class="fas fa-font"></i></button>
+            <button class="tool-btn" id="btn-connector" onclick="app.tools.set('connector')" title="Connector Line"><i class="fas fa-project-diagram"></i></button>
+            <div class="sep"></div>
+            <button class="tool-btn" onclick="app.history.undo()"><i class="fas fa-undo"></i></button>
+            <button class="tool-btn" onclick="app.history.redo()"><i class="fas fa-redo"></i></button>
         </div>
+
+        <!-- Properties -->
+        <div id="properties-bar">
+            <div class="color-dot active" style="background:#000;" onclick="app.props.setColor('#000', this)"></div>
+            <div class="color-dot" style="background:#e74c3c;" onclick="app.props.setColor('#e74c3c', this)"></div>
+            <div class="color-dot" style="background:#2980b9;" onclick="app.props.setColor('#2980b9', this)"></div>
+            <div class="color-dot" style="background:#27ae60;" onclick="app.props.setColor('#27ae60', this)"></div>
+            <div class="color-dot" style="background:#f1c40f;" onclick="app.props.setColor('#f1c40f', this)"></div>
+            <div style="width:1px; height:20px; background:#ccc;"></div>
+            <input type="range" min="1" max="50" value="3" oninput="app.props.setSize(this.value)">
+            <div style="width:1px; height:20px; background:#ccc;"></div>
+            <label style="font-size:0.8rem; display:flex; align-items:center;">
+                <input type="checkbox" onchange="app.props.toggleGrid(this.checked)"> Snap
+            </label>
+        </div>
+
+        <input type="file" id="file-loader" hidden>
     </div>
 
     <!-- =========================================
-         LOGIC
+         APPLICATION LOGIC
          ========================================= -->
     <script>
-    class WhiteboardApp {
-        constructor() {
-            this.canvas = null;
-            this.pages = []; 
-            this.currentPageIndex = 0;
-            this.undoStack = []; this.redoStack = [];
-            this.historyProcessing = false;
-            
-            this.currentMode = 'select'; 
-            this.currentColor = '#000000';
-            this.currentSize = 3;
-            this.activeTools = {}; // ruler, dice
-
-            this.init();
-        }
-
+    /**
+     * OpenFlipchart v4.0 Controller
+     */
+    const app = {
+        canvas: null,
+        mode: 'design', // 'design' or 'present'
+        state: {
+            color: '#000000',
+            size: 3,
+            tool: 'select',
+            isSnapping: false,
+            pages: [],
+            pageIndex: 0
+        },
+        
         init() {
-            // 1. Initialize Fabric with optimizations
+            // Fabric Config
+            fabric.Object.prototype.transparentCorners = false;
+            fabric.Object.prototype.cornerColor = '#2c3e50';
+            fabric.Object.prototype.cornerStyle = 'circle';
+            
             this.canvas = new fabric.Canvas('c', {
-                isDrawingMode: false, backgroundColor: '#ffffff', selection: true,
-                perPixelTargetFind: true, // Better hit detection for transparency
-                targetFindTolerance: 4
+                backgroundColor: '#ffffff',
+                selection: true,
+                preserveObjectStacking: true
             });
 
-            this.setupResponsiveCanvas();
+            this.ui.resize();
+            window.addEventListener('resize', () => this.ui.resize());
+            
+            // Events
             this.bindEvents();
-            this.setupDragAndDrop();
-            this.addNewPage();
-            this.setTool('pen'); // Default start
-        }
-
-        /* --- DRAG AND DROP IMAGES --- */
-        setupDragAndDrop() {
-            const container = document.getElementById('app-container');
+            this.pages.add(); // Init first page
+            this.tools.set('pen'); // Start with pen
             
-            container.addEventListener('dragover', (e) => { e.preventDefault(); });
+            // Global click to close context menu
+            window.addEventListener('click', () => {
+                document.getElementById('context-menu').style.display = 'none';
+            });
+        },
+
+        setMode(mode) {
+            this.mode = mode;
+            document.body.className = `mode-${mode}`;
             
-            container.addEventListener('drop', (e) => {
-                e.preventDefault();
-                const file = e.dataTransfer.files[0];
-                if(file && file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = (f) => {
-                        fabric.Image.fromURL(f.target.result, (img) => {
-                            img.scaleToWidth(300);
-                            img.set({ left: e.clientX - 250, top: e.clientY - 50 }); // adjust for sidebar
-                            this.canvas.add(img);
-                            this.canvas.setActiveObject(img);
-                            this.saveState();
-                            this.setTool('select');
-                        });
-                    };
-                    reader.readAsDataURL(file);
-                }
-            });
-        }
+            // UI Toggle
+            document.querySelector('.design-btn').classList.toggle('active', mode === 'design');
+            document.querySelector('.present-btn').classList.toggle('active', mode === 'present');
 
-        /* --- HISTORY --- */
-        saveState() {
-            if(this.historyProcessing) return;
-            if (this.undoStack.length > 30) this.undoStack.shift();
-            this.undoStack.push(JSON.stringify(this.canvas.toJSON()));
-            this.redoStack = [];
-        }
-
-        undo() {
-            if (this.undoStack.length === 0) return;
-            this.historyProcessing = true;
-            this.redoStack.push(JSON.stringify(this.canvas.toJSON()));
-            const state = this.undoStack.pop();
-            this.canvas.loadFromJSON(state, () => {
-                this.canvas.renderAll();
-                this.historyProcessing = false;
-                this.updateBrushSettings();
-            });
-        }
-
-        redo() {
-            if (this.redoStack.length === 0) return;
-            this.historyProcessing = true;
-            this.undoStack.push(JSON.stringify(this.canvas.toJSON()));
-            const state = this.redoStack.pop();
-            this.canvas.loadFromJSON(state, () => {
-                this.canvas.renderAll();
-                this.historyProcessing = false;
-                this.updateBrushSettings();
-            });
-        }
-
-        setupResponsiveCanvas() {
-            const stage = document.getElementById('canvas-stage');
-            new ResizeObserver(() => {
-                this.canvas.setWidth(stage.clientWidth);
-                this.canvas.setHeight(stage.clientHeight);
-                this.canvas.renderAll();
-                this.updateBackground();
-            }).observe(stage);
-        }
-
-        /* --- TOOLS & MODES --- */
-        setTool(mode) {
-            // UI Update
-            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-            const btn = document.getElementById(`tool-${mode}`);
-            if(btn) btn.classList.add('active');
-
-            this.currentMode = mode;
-            this.canvas.isDrawingMode = false;
-            this.canvas.selection = true;
-            this.canvas.off('mouse:down');
-            this.canvas.off('path:created'); // Clear laser listener
-
-            if (mode === 'pen' || mode === 'highlighter' || mode === 'laser') {
-                this.canvas.isDrawingMode = true;
+            if (mode === 'present') {
                 this.canvas.selection = false;
-                this.updateBrushSettings();
-            } 
-            else if (mode === 'eraser') {
-                this.canvas.isDrawingMode = true;
-                this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas);
-                this.canvas.freeDrawingBrush.color = '#ffffff'; 
-                this.canvas.freeDrawingBrush.width = 50;
+                this.canvas.forEachObject(o => {
+                    o.selectable = !o.lockMovementX; // Only unlocked items selectable
+                    o.hoverCursor = o.selectable ? 'pointer' : 'default';
+                });
+                this.tools.set('select');
+                document.getElementById('main-toolbar').style.display = 'none';
+            } else {
+                this.canvas.selection = true;
+                this.canvas.forEachObject(o => {
+                    o.selectable = true;
+                    o.hoverCursor = 'move';
+                });
+                document.getElementById('main-toolbar').style.display = 'flex';
             }
-            else if (['rect','circle'].includes(mode)) {
-                this.canvas.selection = false;
-                this.canvas.defaultCursor = 'crosshair';
-                this.setupShapeDrawer(mode);
-            }
-        }
+            this.canvas.renderAll();
+        },
 
-        updateBrushSettings() {
-            if (!this.canvas.freeDrawingBrush) return;
-            const size = parseInt(this.currentSize, 10);
-
-            if (this.currentMode === 'pen') {
-                this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas);
-                this.canvas.freeDrawingBrush.color = this.currentColor;
-                this.canvas.freeDrawingBrush.width = size;
-                this.canvas.freeDrawingBrush.decimate = 2; // Smooth out shakey hands
-            } 
-            else if (this.currentMode === 'highlighter') {
-                this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas);
-                const c = new fabric.Color(this.currentColor);
-                this.canvas.freeDrawingBrush.color = c.setAlpha(0.3).toRgba();
-                this.canvas.freeDrawingBrush.width = size * 4;
-            }
-            else if (this.currentMode === 'laser') {
-                this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas);
-                this.canvas.freeDrawingBrush.color = 'red';
-                this.canvas.freeDrawingBrush.width = 5;
+        /* --- UI & LAYOUT --- */
+        ui: {
+            resize() {
+                const el = document.getElementById('canvas-wrapper');
+                app.canvas.setWidth(el.clientWidth);
+                app.canvas.setHeight(el.clientHeight);
+                app.canvas.renderAll();
+            },
+            switchTab(tab) {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.sidebar-content').forEach(c => c.classList.remove('active'));
                 
-                // Magic: Fade out immediately
-                this.canvas.on('path:created', (e) => {
-                    e.path.animate('opacity', 0, {
-                        duration: 1000,
-                        onChange: this.canvas.renderAll.bind(this.canvas),
-                        onComplete: () => {
-                            this.canvas.remove(e.path);
-                        }
-                    });
+                // Active Logic relies on event bubbling or index match, simplified here:
+                if(tab === 'pages') {
+                    document.querySelector('.tab-btn:first-child').classList.add('active');
+                    document.getElementById('tab-pages').classList.add('active');
+                } else {
+                    document.querySelector('.tab-btn:last-child').classList.add('active');
+                    document.getElementById('tab-lib').classList.add('active');
+                }
+            }
+        },
+
+        /* --- PAGES --- */
+        pages: {
+            add() {
+                if(app.state.pages.length > 0) this.saveCurrent();
+                app.state.pages.push({ json: app.canvas.toJSON() });
+                this.load(app.state.pages.length - 1);
+                this.renderList();
+            },
+            saveCurrent() {
+                app.state.pages[app.state.pageIndex].json = app.canvas.toJSON();
+            },
+            load(index) {
+                if(app.state.pages.length > 0) this.saveCurrent();
+                app.state.pageIndex = index;
+                app.canvas.loadFromJSON(app.state.pages[index].json, () => {
+                    app.canvas.renderAll();
+                    app.history.reset();
+                    app.tools.set(app.state.tool); // Restore tool
+                });
+                this.renderList();
+            },
+            renderList() {
+                const list = document.getElementById('page-list');
+                list.innerHTML = '';
+                app.state.pages.forEach((p, i) => {
+                    const el = document.createElement('div');
+                    el.className = `page-thumb ${i === app.state.pageIndex ? 'active' : ''}`;
+                    el.innerHTML = `<i class="far fa-file"></i> <div class="page-badge">${i+1}</div>`;
+                    el.onclick = () => this.load(i);
+                    list.appendChild(el);
                 });
             }
-        }
+        },
 
-        setupShapeDrawer(type) {
-            let rect, isDown, origX, origY;
-            this.canvas.on('mouse:down', (o) => {
-                isDown = true;
-                const p = this.canvas.getPointer(o.e);
-                origX = p.x; origY = p.y;
-                if (type === 'rect') {
-                    rect = new fabric.Rect({ left: origX, top: origY, width:0, height:0, fill: this.currentColor });
-                } else {
-                    rect = new fabric.Circle({ left: origX, top: origY, radius:1, fill: this.currentColor });
-                }
-                this.canvas.add(rect);
-            });
-            this.canvas.on('mouse:move', (o) => {
-                if(!isDown) return;
-                const p = this.canvas.getPointer(o.e);
-                if(type === 'rect') {
-                    rect.set({ width: Math.abs(origX - p.x), height: Math.abs(origY - p.y) });
-                    if(origX > p.x) rect.set({ left: p.x });
-                    if(origY > p.y) rect.set({ top: p.y });
-                } else {
-                    rect.set({ radius: Math.abs(origX - p.x)/2 });
-                    if(origX > p.x) rect.set({ left: p.x });
-                }
-                this.canvas.renderAll();
-            });
-            this.canvas.on('mouse:up', () => {
-                isDown = false; rect.setCoords();
-                this.saveState(); this.setTool('select');
-            });
-        }
+        /* --- TOOLS --- */
+        tools: {
+            set(tool) {
+                app.state.tool = tool;
+                app.canvas.isDrawingMode = false;
+                app.canvas.selection = true;
+                
+                // UI
+                document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                const btn = document.getElementById(`btn-${tool}`);
+                if(btn) btn.classList.add('active');
 
-        /* --- FLOATING CLASSROOM TOOLS --- */
-        toggleTool(type) {
-            const layer = document.getElementById('overlay-layer');
-            if (this.activeTools[type]) {
-                this.activeTools[type].remove();
-                delete this.activeTools[type];
-                return;
+                if (tool === 'pen' || tool === 'highlighter') {
+                    app.canvas.isDrawingMode = true;
+                    app.canvas.selection = false;
+                    app.props.refreshBrush();
+                } else if (tool === 'eraser') {
+                    app.canvas.isDrawingMode = true;
+                    app.canvas.freeDrawingBrush = new fabric.PencilBrush(app.canvas);
+                    app.canvas.freeDrawingBrush.color = '#ffffff';
+                    app.canvas.freeDrawingBrush.width = 40;
+                }
+            },
+            addText() {
+                const t = new fabric.IText('Text', { 
+                    left: 200, top: 200, fill: app.state.color, fontSize: 40 
+                });
+                app.canvas.add(t);
+                app.canvas.setActiveObject(t);
+                this.set('select');
             }
+        },
 
-            const el = document.createElement('div');
-            el.className = `floating-tool tool-${type}`;
-            el.style.left = '300px'; el.style.top = '200px';
+        /* --- PROPERTIES --- */
+        props: {
+            setColor(hex, el) {
+                app.state.color = hex;
+                document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+                if(el) el.classList.add('active');
+                
+                const active = app.canvas.getActiveObject();
+                if(active) {
+                    active.set({ fill: hex });
+                    if(active.type === 'path') active.set({ stroke: hex });
+                    app.canvas.renderAll();
+                    app.history.save();
+                }
+                this.refreshBrush();
+            },
+            setSize(val) {
+                app.state.size = parseInt(val, 10);
+                this.refreshBrush();
+            },
+            refreshBrush() {
+                if(!app.canvas.freeDrawingBrush) return;
+                if(app.state.tool === 'pen') {
+                    app.canvas.freeDrawingBrush.color = app.state.color;
+                    app.canvas.freeDrawingBrush.width = app.state.size;
+                } else if(app.state.tool === 'highlighter') {
+                    const c = new fabric.Color(app.state.color);
+                    app.canvas.freeDrawingBrush.color = c.setAlpha(0.3).toRgba();
+                    app.canvas.freeDrawingBrush.width = app.state.size * 4;
+                }
+            },
+            toggleGrid(active) {
+                app.state.isSnapping = active;
+                if(active) {
+                    // Visual grid
+                    const p = document.createElement('canvas'); p.width=30; p.height=30;
+                    const ctx = p.getContext('2d');
+                    ctx.fillStyle = '#eee'; ctx.fillRect(0,0,1,30); ctx.fillRect(0,0,30,1);
+                    app.canvas.setBackgroundColor(new fabric.Pattern({source:p, repeat:'repeat'}), app.canvas.renderAll.bind(app.canvas));
+                } else {
+                    app.canvas.setBackgroundColor('#ffffff', app.canvas.renderAll.bind(app.canvas));
+                }
+            }
+        },
 
-            if (type === 'ruler') {
-                el.innerHTML = `<div class="ruler-marks"></div>`;
-            } 
-            else if (type === 'dice') {
-                el.innerHTML = '<i class="fas fa-dice-one"></i>';
-                el.onclick = (e) => {
-                    // Prevent drag
-                    if(e.detail > 1) return; // ignore double click
-                    const icons = ['one','two','three','four','five','six'];
-                    let roll = 0;
-                    const spin = setInterval(() => {
-                        el.innerHTML = `<i class="fas fa-dice-${icons[roll%6]}"></i>`;
-                        roll++;
-                        if(roll > 10) {
-                            clearInterval(spin);
-                            const final = Math.floor(Math.random()*6);
-                            el.innerHTML = `<i class="fas fa-dice-${icons[final]}" style="color:${this.currentColor}"></i>`;
+        /* --- LIBRARY & DRAG DROP --- */
+        lib: {
+            dragStart(e, type) {
+                e.dataTransfer.setData('type', type);
+            },
+            drop(e) {
+                e.preventDefault();
+                const type = e.dataTransfer.getData('type');
+                const p = app.canvas.getPointer(e);
+                let obj;
+
+                const opts = { left: p.x, top: p.y, fill: app.state.color, originX:'center', originY:'center' };
+
+                if(type === 'rect') obj = new fabric.Rect({ ...opts, width:100, height:100 });
+                else if(type === 'circle') obj = new fabric.Circle({ ...opts, radius:50 });
+                else if(type === 'triangle') obj = new fabric.Triangle({ ...opts, width:100, height:100 });
+                else if(type === 'star') {
+                    // Manual star polygon
+                    obj = new fabric.Polygon([
+                        {x:0,y:-50},{x:15,y:-20},{x:50,y:-20},{x:20,y:5},{x:30,y:40},{x:0,y:20},
+                        {x:-30,y:40},{x:-20,y:5},{x:-50,y:-20},{x:-15,y:-20}
+                    ], opts);
+                } else if(type === 'arrow') {
+                    // Simplified arrow
+                    obj = new fabric.Path('M 0 10 L 50 10 L 50 20 L 80 0 L 50 -20 L 50 -10 L 0 -10 z', opts);
+                }
+
+                if(obj) {
+                    app.canvas.add(obj);
+                    app.canvas.setActiveObject(obj);
+                    app.history.save();
+                }
+            }
+        },
+
+        /* --- CONTEXT MENU ACTIONS --- */
+        ctx: {
+            target: null,
+            open(e, target) {
+                e.preventDefault();
+                if(!target) return;
+                this.target = target;
+                
+                // Select it if not already
+                app.canvas.setActiveObject(target);
+                
+                const menu = document.getElementById('context-menu');
+                menu.style.display = 'flex';
+                menu.style.left = e.clientX + 'px';
+                menu.style.top = e.clientY + 'px';
+            },
+            action(act) {
+                const t = app.canvas.getActiveObject();
+                if(!t) return;
+                
+                switch(act) {
+                    case 'lock':
+                        t.set({ lockMovementX:true, lockMovementY:true, lockRotation:true, lockScalingX:true, lockScalingY:true });
+                        break;
+                    case 'unlock':
+                        t.set({ lockMovementX:false, lockMovementY:false, lockRotation:false, lockScalingX:false, lockScalingY:false });
+                        break;
+                    case 'front': t.bringToFront(); break;
+                    case 'back': t.sendToBack(); break;
+                    case 'clone':
+                        t.clone(cloned => {
+                            cloned.set({ left: t.left+20, top: t.top+20 });
+                            app.canvas.add(cloned);
+                        });
+                        break;
+                    case 'cloner':
+                        // Custom logic: Attach a flag
+                        t.isCloner = !t.isCloner;
+                        t.set('opacity', t.isCloner ? 0.7 : 1);
+                        break;
+                    case 'group':
+                        if(t.type === 'activeSelection') {
+                            t.toGroup();
+                            app.canvas.requestRenderAll();
                         }
-                    }, 100);
+                        break;
+                    case 'ungroup':
+                        if(t.type === 'group') {
+                            t.toActiveSelection();
+                            app.canvas.requestRenderAll();
+                        }
+                        break;
                 }
+                app.canvas.renderAll();
+                app.history.save();
+                document.getElementById('context-menu').style.display = 'none';
             }
-            else if (type === 'clock') {
-                el.innerHTML = `<h3>00:00</h3><button>Start/Stop</button><button onclick="this.parentElement.remove()">X</button>`;
-                // Simplified clock logic for brevity
-                let sec=0, int=null;
-                el.querySelector('button').onclick = () => {
-                    if(int) { clearInterval(int); int=null; }
-                    else { int = setInterval(() => { sec++; el.querySelector('h3').innerText = new Date(sec*1000).toISOString().substr(14,5); }, 1000); }
-                }
-            }
+        },
 
-            layer.appendChild(el);
-            this.makeDraggable(el);
-            this.activeTools[type] = el;
-        }
-
-        makeDraggable(el) {
-            let isDragging = false, startX, startY, initLeft, initTop;
-            el.addEventListener('mousedown', e => {
-                if(e.target.tagName==='BUTTON') return;
-                isDragging = true;
-                startX = e.clientX; startY = e.clientY;
-                initLeft = el.offsetLeft; initTop = el.offsetTop;
-            });
-            window.addEventListener('mousemove', e => {
-                if(!isDragging) return;
-                el.style.left = (initLeft + (e.clientX - startX)) + 'px';
-                el.style.top = (initTop + (e.clientY - startY)) + 'px';
-            });
-            window.addEventListener('mouseup', () => isDragging = false);
-        }
-
-        /* --- PAGES & I/O --- */
-        addNewPage() {
-            if(this.pages.length > 0) this.pages[this.currentPageIndex] = this.canvas.toJSON();
-            this.pages.push({ version: "5.3", objects: [], background: "#ffffff" });
-            this.renderPageList();
-            this.loadPage(this.pages.length - 1);
-        }
-
-        loadPage(idx) {
-            this.pages[this.currentPageIndex] = this.canvas.toJSON();
-            this.currentPageIndex = idx;
-            this.canvas.loadFromJSON(this.pages[idx], () => {
-                this.canvas.renderAll();
-                this.updateUIForPage();
-                this.undoStack = []; this.redoStack = [];
-                this.setTool(this.currentMode);
-            });
-        }
-
-        renderPageList() {
-            const list = document.getElementById('page-list');
-            list.innerHTML = '';
-            this.pages.forEach((p, i) => {
-                const d = document.createElement('div');
-                d.className = `page-thumbnail ${i===this.currentPageIndex?'active':''}`;
-                d.innerHTML = `<span class="page-num">${i+1}</span>`;
-                d.onclick = () => this.loadPage(i);
-                list.appendChild(d);
-            });
-        }
-
-        updateUIForPage() {
-            document.querySelectorAll('.page-thumbnail').forEach((d,i) => {
-                if(i===this.currentPageIndex) d.classList.add('active');
-                else d.classList.remove('active');
-            });
-            this.updateBackground();
-        }
-
-        updateBackground() {
-            const v = document.getElementById('bg-select').value;
-            let bg = '#ffffff';
-            if(v==='blue') bg = '#81ecec';
-            if(v==='black') bg = '#2d3436';
-            
-            if(v==='grid' || v==='lines') {
-                const c = document.createElement('canvas'); c.width=40; c.height=40;
-                const ctx = c.getContext('2d'); ctx.strokeStyle = (v==='black'?'#555':'#ddd');
-                ctx.beginPath();
-                if(v==='grid') { ctx.moveTo(0,0); ctx.lineTo(40,0); ctx.moveTo(0,0); ctx.lineTo(0,40); }
-                else { ctx.moveTo(0,39); ctx.lineTo(40,39); }
-                ctx.stroke();
-                this.canvas.setBackgroundColor(new fabric.Pattern({source:c, repeat:'repeat'}), this.canvas.renderAll.bind(this.canvas));
-            } else {
-                this.canvas.setBackgroundColor(bg, this.canvas.renderAll.bind(this.canvas));
-            }
-        }
-
+        /* --- EVENTS & HISTORY --- */
         bindEvents() {
-            // Trash Logic
-            const trash = document.getElementById('trash-zone');
+            // Drag Drop from library
+            const wrap = document.getElementById('canvas-wrapper');
+            wrap.addEventListener('dragover', e => e.preventDefault());
+            wrap.addEventListener('drop', e => app.lib.drop(e));
+
+            // Infinite Cloner Logic
+            this.canvas.on('mouse:down', (e) => {
+                if(e.target && e.target.isCloner && app.mode !== 'present') {
+                    // Create a clone immediately
+                    e.target.clone(cloned => {
+                        cloned.set({ left: e.target.left, top: e.target.top, isCloner: false, opacity: 1 });
+                        app.canvas.add(cloned);
+                        app.canvas.setActiveObject(cloned);
+                        // Start dragging the new clone
+                        cloned._onMouseDown(e.e); 
+                    });
+                }
+            });
+
+            // Context Menu
+            this.canvas.on('mouse:down', (e) => {
+                if(e.button === 3 || (e.e.button === 2)) { // Right click
+                    app.ctx.open(e.e, e.target);
+                }
+            });
+            // Disable native context menu on canvas
+            document.querySelector('.upper-canvas').addEventListener('contextmenu', e => e.preventDefault());
+
+            // Snapping
             this.canvas.on('object:moving', (e) => {
-                // Check collision with trash (bottom right)
-                const p = this.canvas.getPointer(e.e);
-                const w = this.canvas.getWidth(), h = this.canvas.getHeight();
-                if (p.x > w - 100 && p.y > h - 100) {
-                    trash.style.transform = 'scale(1.2)';
+                if(app.state.isSnapping) {
+                    e.target.set({
+                        left: Math.round(e.target.left / 30) * 30,
+                        top: Math.round(e.target.top / 30) * 30
+                    });
+                }
+                
+                // Trash Can Hover
+                const can = document.getElementById('trash-can');
+                const p = e.target.getCenterPoint();
+                const wrap = document.getElementById('canvas-wrapper');
+                // Check if near bottom right
+                if(p.x > wrap.clientWidth - 100 && p.y > wrap.clientHeight - 100) {
+                    can.classList.add('hover');
                 } else {
-                    trash.style.transform = 'scale(1)';
+                    can.classList.remove('hover');
                 }
             });
+
             this.canvas.on('mouse:up', (e) => {
-                const p = this.canvas.getPointer(e.e);
-                const w = this.canvas.getWidth(), h = this.canvas.getHeight();
-                if (p.x > w - 100 && p.y > h - 100) {
-                    const active = this.canvas.getActiveObjects();
-                    if(active.length) {
-                        this.canvas.discardActiveObject();
-                        active.forEach(a => this.canvas.remove(a));
-                        trash.style.transform = 'scale(1)';
-                        this.saveState();
-                    }
-                }
+                 const can = document.getElementById('trash-can');
+                 if(can.classList.contains('hover')) {
+                     const active = app.canvas.getActiveObjects();
+                     app.canvas.discardActiveObject();
+                     active.forEach(o => app.canvas.remove(o));
+                     can.classList.remove('hover');
+                     app.history.save();
+                 }
             });
 
-            // Standard Bindings
-            ['select','pen','highlighter','eraser','laser','rect','circle'].forEach(t => {
-                document.getElementById(`tool-${t}`).onclick = () => this.setTool(t);
-            });
-            document.getElementById('tool-text').onclick = () => {
-                const t = new fabric.IText('Text', { left:200, top:200, fill:this.currentColor, fontSize:60 });
-                this.canvas.add(t); this.canvas.setActiveObject(t); this.setTool('select');
-            };
-            document.getElementById('tool-undo').onclick = () => this.undo();
-            document.getElementById('tool-redo').onclick = () => this.redo();
-            document.getElementById('tool-clear').onclick = () => {
-                if(confirm('Clear Page?')) { this.canvas.clear(); this.updateBackground(); this.saveState(); }
-            };
+            // History Hooks
+            this.canvas.on('object:added', () => app.history.save());
+            this.canvas.on('object:modified', () => app.history.save());
+            this.canvas.on('object:removed', () => app.history.save());
+        },
 
-            // Colors
-            document.querySelectorAll('.color-swatch').forEach(s => {
-                s.onclick = (e) => {
-                    document.querySelectorAll('.color-swatch').forEach(x => x.classList.remove('active'));
-                    e.target.classList.add('active');
-                    this.currentColor = e.target.getAttribute('data-color');
-                    
-                    const active = this.canvas.getActiveObject();
-                    if(active) {
-                        active.set({fill:this.currentColor});
-                        if(active.type==='path') active.set({stroke:this.currentColor});
-                        this.canvas.renderAll(); this.saveState();
-                    }
-                    if(['pen','highlighter'].includes(this.currentMode)) this.updateBrushSettings();
-                }
-            });
-
-            document.getElementById('size-slider').oninput = (e) => {
-                this.currentSize = e.target.value; this.updateBrushSettings();
-            };
-            document.getElementById('bg-select').onchange = () => this.updateBackground();
-            document.getElementById('add-page-btn').onclick = () => this.addNewPage();
-            
-            // I/O
-            document.getElementById('btn-export').onclick = () => {
-                this.pages[this.currentPageIndex] = this.canvas.toJSON();
-                const blob = new Blob([JSON.stringify({pages:this.pages})], {type:'application/json'});
+        history: {
+            undoStack: [], redoStack: [], processing: false,
+            save() {
+                if(this.processing) return;
+                if(this.undoStack.length > 20) this.undoStack.shift();
+                this.undoStack.push(JSON.stringify(app.canvas.toJSON()));
+                this.redoStack = [];
+            },
+            undo() {
+                if(!this.undoStack.length) return;
+                this.processing = true;
+                this.redoStack.push(JSON.stringify(app.canvas.toJSON()));
+                app.canvas.loadFromJSON(this.undoStack.pop(), () => {
+                    app.canvas.renderAll();
+                    this.processing = false;
+                    app.props.refreshBrush();
+                });
+            },
+            redo() {
+                if(!this.redoStack.length) return;
+                this.processing = true;
+                this.undoStack.push(JSON.stringify(app.canvas.toJSON()));
+                app.canvas.loadFromJSON(this.redoStack.pop(), () => {
+                    app.canvas.renderAll();
+                    this.processing = false;
+                    app.props.refreshBrush();
+                });
+            },
+            reset() { this.undoStack=[]; this.redoStack=[]; }
+        },
+        
+        io: {
+            export() {
+                app.pages.saveCurrent();
+                const json = JSON.stringify({ pages: app.state.pages });
+                const blob = new Blob([json], {type:'application/json'});
                 const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob); a.download='lesson.json'; a.click();
-            };
-            const fi = document.getElementById('file-input');
-            document.getElementById('btn-import').onclick = () => fi.click();
-            fi.onchange = (e) => {
-                const r = new FileReader();
-                r.onload = (res) => {
-                    try {
-                        const d = JSON.parse(res.target.result);
-                        if(d.pages) {
-                            this.pages = d.pages; this.currentPageIndex=0;
-                            this.renderPageList(); this.loadPage(0);
-                        }
-                    } catch(err) { alert('Load Error'); }
+                a.href = URL.createObjectURL(blob); a.download = 'lesson.json'; a.click();
+            },
+            import() {
+                const input = document.getElementById('file-loader');
+                input.onchange = (e) => {
+                    const r = new FileReader();
+                    r.onload = (res) => {
+                        try {
+                            const d = JSON.parse(res.target.result);
+                            if(d.pages) {
+                                app.state.pages = d.pages;
+                                app.pages.load(0);
+                            }
+                        } catch(e) { alert("File error"); }
+                    };
+                    if(e.target.files[0]) r.readAsText(e.target.files[0]);
+                    input.value = '';
                 };
-                if(e.target.files[0]) r.readAsText(e.target.files[0]);
-                e.target.value='';
-            };
-
-            // Canvas Observers
-            this.canvas.on('object:added', () => this.saveState());
-            this.canvas.on('object:modified', () => this.saveState());
-            this.canvas.on('object:removed', () => this.saveState());
+                input.click();
+            }
         }
-    }
+    };
 
-    window.onload = () => window.app = new WhiteboardApp();
+    // Boot
+    window.onload = () => app.init();
+
     </script>
 </body>
 </html>
