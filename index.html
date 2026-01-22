@@ -3,41 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenBoard - Web Edition</title>
+    <title>OpenBoard Web</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Load Fabric.js from CDN -->
+    <!-- Fabric.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
 </head>
 <body>
 
-    <div class="toolbar">
-        <div class="tool-group">
-            <button id="btn-select" class="active" title="Select/Move">🖱️ Select</button>
-            <button id="btn-pen" title="Pen Tool">✏️ Pen</button>
-            <button id="btn-rect" title="Rectangle">⬜ Rect</button>
-            <button id="btn-circle" title="Circle">⭕ Circle</button>
-            <button id="btn-text" title="Text Box">TEXT</button>
+    <!-- Main Navigation / Toolbar -->
+    <nav class="navbar">
+        <div class="nav-group brand">
+            <span class="logo-text">OpenBoard</span>
         </div>
 
-        <div class="tool-group">
-            <label for="color-picker">Color:</label>
-            <input type="color" id="color-picker" value="#000000">
-            
-            <label for="line-width">Size:</label>
-            <input type="range" id="line-width" min="1" max="50" value="3">
+        <div class="nav-group tools">
+            <button id="btn-select" title="Select Tool (V)">
+                <span class="icon">🖱️</span>
+                <span class="label">Select</span>
+            </button>
+            <button id="btn-pen" class="active" title="Pen Tool (P)">
+                <span class="icon">✏️</span>
+                <span class="label">Pen</span>
+            </button>
+            <button id="btn-rect" title="Rectangle (R)">
+                <span class="icon">⬜</span>
+                <span class="label">Shape</span>
+            </button>
+            <button id="btn-text" title="Text (T)">
+                <span class="icon">A</span>
+                <span class="label">Text</span>
+            </button>
+            <button id="btn-eraser" title="Eraser">
+                <span class="icon">🧹</span>
+                <span class="label">Clear</span>
+            </button>
         </div>
 
-        <div class="tool-group">
-            <button id="btn-clear" title="Clear Canvas">🗑️ Clear</button>
-            <button id="btn-save" title="Save Project">💾 Save</button>
-            <label class="file-upload">
+        <div class="nav-group properties">
+            <div class="prop-item">
+                <input type="color" id="color-picker" value="#000000" title="Color">
+            </div>
+            <div class="prop-item">
+                <input type="range" id="line-width" min="1" max="50" value="3" title="Brush Size">
+            </div>
+        </div>
+
+        <div class="nav-group actions">
+            <button id="btn-save" class="secondary" title="Save File">💾 Save</button>
+            <label class="file-btn secondary" title="Open File">
                 📂 Open
-                <input type="file" id="file-input" accept=".json,.flipchart">
+                <input type="file" id="file-input" accept=".json">
             </label>
         </div>
-    </div>
+    </nav>
 
-    <div id="canvas-container">
+    <!-- Canvas Area -->
+    <div id="canvas-wrapper">
         <canvas id="c"></canvas>
     </div>
 
